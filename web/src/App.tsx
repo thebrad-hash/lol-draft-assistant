@@ -132,8 +132,10 @@ function Shell() {
         <div className="rightcol">
           <PickOrder />
           <TeamAnalysis />
-          <RecommendationsPanel />
-          <PoolPicks />
+          <div className="recos-row">
+            <RecommendationsPanel />
+            <PoolPicks />
+          </div>
         </div>
       </main>
 

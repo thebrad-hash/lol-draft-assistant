@@ -88,7 +88,7 @@ h3 {
 
 .main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 440px;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 820px);
   gap: 16px;
   padding: 16px;
   align-items: start;
@@ -903,6 +903,19 @@ input[type='range'] {
   min-width: 0;
 }
 
+/* Best picks + From your pool side by side (wraps to stacked when narrow). */
+.recos-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.recos-row > * {
+  flex: 1 1 360px;
+  min-width: 0;
+  max-width: 560px;
+}
+
 .analysis {
   background: linear-gradient(180deg, var(--panel), var(--bg-2));
   border: 1px solid var(--border);
@@ -1274,4 +1287,105 @@ input[type='range'] {
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
   border-radius: 999px;
   padding: 2px 7px;
+}
+
+/* ---------------- coachless deep-link ---------------- */
+.card__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.coachless-link {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  text-decoration: none;
+  border: 1px solid rgba(200, 170, 110, 0.35);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.coachless-link:hover {
+  background: rgba(200, 170, 110, 0.12);
+  border-color: var(--gold);
+}
+.coachless-link--compact {
+  font-size: 10px;
+  padding: 0 5px;
+}
+
+/* ---------------- auto (context-adaptive) weights ---------------- */
+.autotoggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.autotoggle input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex: none;
+}
+.autotoggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.autotoggle__title {
+  font-weight: 700;
+  font-size: 13px;
+}
+.autotoggle__hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.weightnotes {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: rgba(255, 157, 60, 0.08);
+  border: 1px solid rgba(255, 157, 60, 0.3);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.weightnotes li {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.wslider__base {
+  color: var(--muted);
+}
+.wslider__arrow {
+  color: var(--muted);
+  margin: 0 4px;
+}
+.wslider__applied {
+  color: var(--accent);
+  font-weight: 800;
+}
+.recos__picker {
+  color: var(--ally);
+  font-weight: 700;
+}
+.recos__autonote {
+  margin: -4px 0 10px;
+  font-size: 11.5px;
+  color: var(--gold);
+  background: rgba(200, 170, 110, 0.08);
+  border: 1px solid rgba(200, 170, 110, 0.25);
+  border-radius: 7px;
+  padding: 4px 8px;
 }

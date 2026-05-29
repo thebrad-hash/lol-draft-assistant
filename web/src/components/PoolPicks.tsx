@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getRecommendations } from '../api';
+import { getAutoWeights } from '../weightsApi';
 import { useLobby } from '../lobby';
 import { useDraft } from '../store';
 import { ROLE_LABEL, type Recommendation } from '../types';
@@ -9,7 +10,7 @@ import { RecommendationCard } from './RecommendationCard';
 // listed in your lobby pool, for your lobby role. Shown alongside global Best
 // picks when you're in a premade lobby.
 export function PoolPicks() {
-  const { state } = useDraft();
+  const { state, autoWeights } = useDraft();
   const { lobbyId, me } = useLobby();
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,21 +26,27 @@ export function PoolPicks() {
     }
     const id = ++reqId.current;
     setLoading(true);
-    const t = setTimeout(() => {
-      getRecommendations({ ...state, pickingForRole: role, poolFilter: me.pool })
-        .then((r) => {
-          if (id === reqId.current) {
-            setRecs(r);
-            setLoading(false);
-          }
-        })
-        .catch(() => {
-          if (id === reqId.current) setLoading(false);
-        });
+    const t = setTimeout(async () => {
+      const reqState = { ...state, pickingForRole: role, poolFilter: me.pool };
+      let weights = state.weights;
+      if (autoWeights) {
+        const aw = await getAutoWeights(reqState);
+        if (aw) weights = aw.weights;
+      }
+      if (id !== reqId.current) return;
+      try {
+        const r = await getRecommendations({ ...reqState, weights });
+        if (id === reqId.current) {
+          setRecs(r);
+          setLoading(false);
+        }
+      } catch {
+        if (id === reqId.current) setLoading(false);
+      }
     }, 180);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lobbyId, poolKey, role, state]);
+  }, [lobbyId, poolKey, role, state, autoWeights]);
 
   if (!lobbyId) return null;
 

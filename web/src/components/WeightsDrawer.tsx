@@ -20,7 +20,8 @@ for (const c of CHAMPIONS) {
 }
 
 export function WeightsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { state, setWeights, resetWeights, setPoolFilter } = useDraft();
+  const { state, setWeights, resetWeights, setPoolFilter, autoWeights, setAutoWeights, appliedWeights, weightNotes } =
+    useDraft();
   const [poolText, setPoolText] = useState(
     () => (state.poolFilter ?? []).map((id) => CHAMPIONS_BY_ID[id]?.name ?? id).join(', '),
   );
@@ -55,11 +56,44 @@ export function WeightsDrawer({ open, onClose }: { open: boolean; onClose: () =>
         </div>
 
         <div className="drawer__section">
+          <label className="autotoggle">
+            <input
+              type="checkbox"
+              checked={autoWeights}
+              onChange={(e) => setAutoWeights(e.target.checked)}
+            />
+            <span className="autotoggle__text">
+              <span className="autotoggle__title">Auto-adapt to draft</span>
+              <span className="autotoggle__hint">
+                rescales these weights to the pick's context — is your lane opponent known, how
+                many allies are locked, where you are in the pick order
+              </span>
+            </span>
+          </label>
+
+          {autoWeights && weightNotes.length > 0 && (
+            <ul className="weightnotes">
+              {weightNotes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          )}
+
           {SLIDERS.map(({ key, label, hint }) => (
             <label key={key} className="wslider">
               <div className="wslider__top">
                 <span className="wslider__label">{label}</span>
-                <span className="wslider__val">{state.weights[key].toFixed(2)}</span>
+                <span className="wslider__val">
+                  {autoWeights ? (
+                    <>
+                      <span className="wslider__base">{state.weights[key].toFixed(2)}</span>
+                      <span className="wslider__arrow">→</span>
+                      <span className="wslider__applied">{appliedWeights[key].toFixed(2)}</span>
+                    </>
+                  ) : (
+                    state.weights[key].toFixed(2)
+                  )}
+                </span>
               </div>
               <input
                 type="range"
@@ -69,11 +103,11 @@ export function WeightsDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 value={state.weights[key]}
                 onChange={(e) => setWeights({ [key]: Number(e.target.value) } as Partial<Weights>)}
               />
-              <span className="wslider__hint">{hint}</span>
+              <span className="wslider__hint">{autoWeights ? `base · ${hint}` : hint}</span>
             </label>
           ))}
           <button className="btn btn--ghost" onClick={resetWeights}>
-            Reset to defaults
+            Reset base to defaults
           </button>
         </div>
 

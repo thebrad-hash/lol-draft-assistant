@@ -7,7 +7,7 @@ import type { DraftState, PickOrderResult } from './types';
 
 const ENDPOINT = '/api/pick-order';
 
-export async function getPickOrder(state: DraftState): Promise<PickOrderResult | null> {
+export async function getPickOrder(state: DraftState, auto = false): Promise<PickOrderResult | null> {
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -17,6 +17,7 @@ export async function getPickOrder(state: DraftState): Promise<PickOrderResult |
         enemyTeam: state.enemyTeam,
         bans: state.bans,
         weights: state.weights,
+        auto,
       }),
     });
     if (!res.ok) return null;

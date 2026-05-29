@@ -26,6 +26,7 @@ from . import config, lcu
 from .evaluate import evaluate_teams
 from .scoring import DraftState, score_draft
 from .store import Store
+from .weights import dynamic_weights
 
 # --- role mapping (UI <-> engine) ---
 UI_TO_ENGINE_ROLE = {
@@ -193,6 +194,31 @@ def recommend(state: DraftStateIn):
     return out
 
 
+@app.post("/api/weights")
+def auto_weights(state: DraftStateIn):
+    """Context-adaptive weights for the role on the clock given both teams' picks.
+    Pure (no store) — returns adjusted weights (camelCase) + readable notes."""
+    my_role = UI_TO_ENGINE_ROLE.get(state.pickingForRole.upper())
+    if my_role is None:
+        raise HTTPException(status_code=400, detail=f"Unknown role {state.pickingForRole!r}")
+    base = {
+        "in_lane": state.weights.inLane,
+        "out_of_lane": state.weights.outOfLane,
+        "synergy": state.weights.synergy,
+        "blindability": state.weights.blindability,
+    }
+    w, notes = dynamic_weights(base, my_role, _map_roles(state.enemyTeam), _map_roles(state.myTeam))
+    return {
+        "weights": {
+            "inLane": w["in_lane"],
+            "outOfLane": w["out_of_lane"],
+            "synergy": w["synergy"],
+            "blindability": w["blindability"],
+        },
+        "notes": notes,
+    }
+
+
 @app.post("/api/evaluate")
 def evaluate(state: EvaluateIn):
     """Score a full 5v5 once both teams are locked, with win conditions.
@@ -230,6 +256,7 @@ class PickOrderIn(BaseModel):
     poolFilter: Optional[list[str]] = None
     weights: WeightsIn = WeightsIn()
     rank: Optional[str] = None
+    auto: bool = False  # context-adaptive weights computed per open role
 
 
 @app.post("/api/pick-order")
@@ -251,9 +278,10 @@ def pick_order(state: PickOrderIn):
         with _store_lock:  # one shared sqlite connection -> serialize queries
             store = get_store()
             for role in open_roles:
+                w = dynamic_weights(weights, role, enemies, allies)[0] if state.auto else weights
                 ds = DraftState(my_role=role, enemies=enemies, allies=allies,
                                 bans=list(state.bans), pool=state.poolFilter)
-                results, _ = score_draft(store, ds, rank=rank, weights=weights)
+                results, _ = score_draft(store, ds, rank=rank, weights=w)
                 if not results:
                     continue
                 top = results[0]

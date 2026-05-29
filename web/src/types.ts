@@ -145,6 +145,12 @@ export interface PickOrderResult {
   suggested: Role | null;
 }
 
+// --- context-adaptive ("auto") weights ---
+export interface AutoWeightsResult {
+  weights: Weights; // rescaled for the current pick context
+  notes: string[]; // human-readable rationale
+}
+
 // --- premade lobby ---
 export interface LobbyMember {
   memberId: string;

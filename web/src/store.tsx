@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getRecommendations } from './api';
+import { getAutoWeights } from './weightsApi';
 import { getEvaluation } from './evaluateApi';
 import { fetchLive } from './live';
 import { CHAMPIONS_BY_ID } from './mock/champions';
@@ -41,6 +42,10 @@ interface DraftContextValue {
   liveStatus: LiveStatus;
   evaluation: TeamEval | null;
   evalLoading: boolean;
+  autoWeights: boolean;
+  appliedWeights: Weights; // weights actually used (== base unless auto is on)
+  weightNotes: string[];
+  setAutoWeights: (on: boolean) => void;
   setLive: (on: boolean) => void;
   // mutations
   toggleBan: (championId: string) => void;
@@ -71,6 +76,15 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   const [evaluation, setEvaluation] = useState<TeamEval | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
   const evalReqId = useRef(0);
+  const [autoWeights, setAutoWeightsState] = useState<boolean>(
+    () => typeof localStorage !== 'undefined' && localStorage.getItem('ld_auto_weights') === '1',
+  );
+  const [appliedWeights, setAppliedWeights] = useState<Weights>(DEFAULT_WEIGHTS);
+  const [weightNotes, setWeightNotes] = useState<string[]>([]);
+  const setAutoWeights = useCallback((on: boolean) => {
+    setAutoWeightsState(on);
+    localStorage.setItem('ld_auto_weights', on ? '1' : '0');
+  }, []);
 
   // --- mutations ---
   const toggleBan = useCallback((championId: string) => {
@@ -131,24 +145,36 @@ export function DraftProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => setState(INITIAL), []);
 
-  // --- reactive recompute (debounced, stale-guarded) ---
+  // --- reactive recompute (debounced, stale-guarded). In auto mode the weights
+  // are first rescaled to the pick context, then used for the recommendation. ---
   useEffect(() => {
     const id = ++reqId.current;
     setLoading(true);
-    const t = setTimeout(() => {
-      getRecommendations(state)
-        .then((recs) => {
-          if (id === reqId.current) {
-            setRecommendations(recs);
-            setLoading(false);
-          }
-        })
-        .catch(() => {
-          if (id === reqId.current) setLoading(false);
-        });
+    const t = setTimeout(async () => {
+      let weights = state.weights;
+      let notes: string[] = [];
+      if (autoWeights) {
+        const aw = await getAutoWeights(state);
+        if (aw) {
+          weights = aw.weights;
+          notes = aw.notes;
+        }
+      }
+      if (id !== reqId.current) return;
+      setAppliedWeights(weights);
+      setWeightNotes(notes);
+      try {
+        const recs = await getRecommendations({ ...state, weights });
+        if (id === reqId.current) {
+          setRecommendations(recs);
+          setLoading(false);
+        }
+      } catch {
+        if (id === reqId.current) setLoading(false);
+      }
     }, 150);
     return () => clearTimeout(t);
-  }, [state]);
+  }, [state, autoWeights]);
 
   // --- full-draft evaluation (only once BOTH teams are locked in) ---
   useEffect(() => {
@@ -223,6 +249,10 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       liveStatus,
       evaluation,
       evalLoading,
+      autoWeights,
+      appliedWeights,
+      weightNotes,
+      setAutoWeights,
       setLive,
       toggleBan,
       removeBan,
@@ -242,6 +272,10 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       liveStatus,
       evaluation,
       evalLoading,
+      autoWeights,
+      appliedWeights,
+      weightNotes,
+      setAutoWeights,
       setLive,
       toggleBan,
       removeBan,

@@ -2,6 +2,7 @@ import { CHAMPIONS_BY_ID } from '../mock/champions';
 import { useDraft, type Side } from '../store';
 import { ROLE_GLYPH, ROLE_LABEL, ROLES, type Role } from '../types';
 import { ChampionAvatar } from './ChampionAvatar';
+import { CoachlessLink } from './CoachlessLink';
 
 const TEAM_SIZE = 5;
 
@@ -39,6 +40,7 @@ function FilledRow({ side, role, champId }: { side: Side; role: Role; champId: s
       <span className="rolechip" title={ROLE_LABEL[role]}>
         {ROLE_GLYPH[role]}
       </span>
+      <CoachlessLink championId={champId} compact />
       <button className="pick__clear" onClick={() => clearSlot(side, role)} title="Remove">
         ×
       </button>

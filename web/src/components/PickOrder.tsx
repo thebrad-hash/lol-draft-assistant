@@ -11,21 +11,21 @@ const fmtEv = (v: number) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
 // "Who picks next": open roles ranked by the EV of their best available pick,
 // recomputed as picks/bans change. Hidden once fewer than two roles are open.
 export function PickOrder() {
-  const { state } = useDraft();
+  const { state, autoWeights } = useDraft();
   const [data, setData] = useState<PickOrderResult | null>(null);
   const reqId = useRef(0);
 
   useEffect(() => {
     const id = ++reqId.current;
     const t = setTimeout(() => {
-      getPickOrder(state)
+      getPickOrder(state, autoWeights)
         .then((d) => {
           if (id === reqId.current) setData(d);
         })
         .catch(() => {});
     }, 180);
     return () => clearTimeout(t);
-  }, [state]);
+  }, [state, autoWeights]);
 
   const open = data?.openRoles ?? [];
   if (open.length < 2) return null; // only meaningful when there's a real choice

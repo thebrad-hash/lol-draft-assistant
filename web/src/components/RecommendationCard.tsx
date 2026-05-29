@@ -2,6 +2,7 @@ import { CHAMPIONS_BY_ID } from '../mock/champions';
 import type { Contribution, Recommendation } from '../types';
 import { ROLE_LABEL } from '../types';
 import { ChampionAvatar } from './ChampionAvatar';
+import { CoachlessLink } from './CoachlessLink';
 
 function fmtSigned(v: number): string {
   return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
@@ -34,7 +35,10 @@ export function RecommendationCard({ rank, rec }: { rank: number; rec: Recommend
       <ChampionAvatar id={rec.championId} name={rec.championName} size={42} />
       <div className="card__body">
         <div className="card__top">
-          <span className="card__name">{rec.championName}</span>
+          <span className="card__head">
+            <span className="card__name">{rec.championName}</span>
+            <CoachlessLink championId={rec.championId} compact />
+          </span>
           <span className={'card__ev ' + (positive ? 'pos' : 'neg')}>
             {fmtSigned(rec.totalEv)}
           </span>

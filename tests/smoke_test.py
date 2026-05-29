@@ -186,6 +186,44 @@ def test_team_eval(store: Store) -> bool:
     return ok
 
 
+def test_dynamic_weights() -> bool:
+    """Context-adaptive weights: blind > in-lane when the lane opponent is hidden,
+    in-lane > blind once it's known, synergy peaks on the last pick, total preserved."""
+    from lol_draft.weights import dynamic_weights
+    print("\n[weights] context-adaptive scoring weights")
+    base = {"in_lane": 0.7, "out_of_lane": 0.5, "synergy": 1.0, "blindability": 0.9}
+    base_sum = sum(base.values())
+    ok = True
+
+    w_blind, _ = dynamic_weights(base, "ADC",
+                                 {"JUNGLE": "Viego", "SUP": "Zilean"},
+                                 {"JUNGLE": "LeeSin", "SUP": "Karma"})
+    if not w_blind["blindability"] > w_blind["in_lane"]:
+        print(f"  BAD blind: blind {w_blind['blindability']} !> in {w_blind['in_lane']}"); ok = False
+
+    w_known, _ = dynamic_weights(base, "ADC",
+                                 {"ADC": "Caitlyn", "JUNGLE": "Viego", "SUP": "Zilean"},
+                                 {"JUNGLE": "LeeSin", "SUP": "Karma"})
+    if not w_known["in_lane"] > w_known["blindability"]:
+        print(f"  BAD known: in {w_known['in_lane']} !> blind {w_known['blindability']}"); ok = False
+
+    w_last, _ = dynamic_weights(base, "ADC",
+                                {"TOP": "Aatrox", "JUNGLE": "Viego", "MID": "Ahri", "ADC": "Caitlyn", "SUP": "Zilean"},
+                                {"TOP": "Garen", "JUNGLE": "LeeSin", "MID": "Sylas", "SUP": "Karma"})
+    if w_last["synergy"] != max(w_last.values()):
+        print(f"  BAD last-pick: synergy not dominant in {w_last}"); ok = False
+
+    for label, w in (("blind", w_blind), ("known", w_known), ("last", w_last)):
+        if abs(sum(w.values()) - base_sum) > 0.05:
+            print(f"  BAD {label} sum {sum(w.values()):.2f} != base {base_sum:.2f}"); ok = False
+
+    if ok:
+        print(f"  ok  blind: blind={w_blind['blindability']} in={w_blind['in_lane']} | "
+              f"known: in={w_known['in_lane']} blind={w_known['blindability']} | "
+              f"last: syn={w_last['synergy']}")
+    return ok
+
+
 def main() -> int:
     with Store() as store:
         results = [
@@ -195,6 +233,7 @@ def main() -> int:
             test_team_eval(store),
         ]
     results.append(test_live_mapping())
+    results.append(test_dynamic_weights())
     passed = all(results)
     print("\n==== " + ("ALL TESTS PASSED" if passed else "SOME TESTS FAILED") + " ====")
     return 0 if passed else 1
