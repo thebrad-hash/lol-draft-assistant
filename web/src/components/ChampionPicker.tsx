@@ -11,6 +11,8 @@ interface Props {
   unavailable: Set<string>;
   /** ids currently chosen for this target (e.g. existing bans) -> marked */
   selected?: Set<string>;
+  /** label shown on already-selected cells (default "banned") */
+  selectedLabel?: string;
   onSelect: (championId: string) => void;
   onClose: () => void;
 }
@@ -20,6 +22,7 @@ export function ChampionPicker({
   roleFilter,
   unavailable,
   selected,
+  selectedLabel = 'banned',
   onSelect,
   onClose,
 }: Props) {
@@ -81,7 +84,7 @@ export function ChampionPicker({
               >
                 <ChampionAvatar id={c.id} name={c.name} size={34} dimmed={isUnavailable} />
                 <span className="champcell__name">{c.name}</span>
-                {isSelected && <span className="champcell__tag">banned</span>}
+                {isSelected && <span className="champcell__tag">{selectedLabel}</span>}
               </button>
             );
           })}

@@ -114,7 +114,29 @@ def champion_map(port: int, token: str) -> dict[int, str]:
 
 
 # --- mapping: LCU session -> UI draft ---
-def session_to_draft(session: dict, cmap: dict[int, str]) -> dict:
+# UI role keys in canonical lane order (the inference fallback ordering).
+ROLE_ORDER = ["TOP", "JUNGLE", "MID", "BOT", "SUPPORT"]
+
+
+def _infer_role(champ: str, taken: dict, champ_roles: dict) -> Optional[str]:
+    """Best still-open role for a champion when the client gives no
+    assignedPosition. The enemy team's positions are ALWAYS hidden by the LCU,
+    and blind/quickplay/practice assign none for anyone — so without this every
+    such pick would be dropped. Prefer the champion's own roles (most-played
+    first), then any open lane, so a known pick is never silently lost."""
+    for cand in champ_roles.get(champ, []):
+        if cand not in taken:
+            return cand
+    for cand in ROLE_ORDER:
+        if cand not in taken:
+            return cand
+    return None
+
+
+def session_to_draft(session: dict, cmap: dict[int, str],
+                     champ_roles: Optional[dict] = None) -> dict:
+    champ_roles = champ_roles or {}
+
     def key(cid) -> Optional[str]:
         cid = int(cid or 0)
         return cmap.get(cid) if cid > 0 else None
@@ -135,23 +157,41 @@ def session_to_draft(session: dict, cmap: dict[int, str]) -> dict:
             bans.append(k)
 
     local_cell = session.get("localPlayerCellId")
-    picking_for: Optional[str] = None
-    my_team: dict[str, str] = {}
-    enemy_team: dict[str, str] = {}
 
-    for m in session.get("myTeam", []) or []:
-        role = POSITION_TO_ROLE.get((m.get("assignedPosition") or "").lower())
-        if m.get("cellId") == local_cell and role:
-            picking_for = role
-        k = key(m.get("championId"))
-        if role and k:
-            my_team[role] = k
+    def map_team(members) -> tuple[dict[str, str], dict]:
+        """Return ({role: champ}, {cellId: role}). Assigned positions win; any
+        champion lacking one is slotted into an open lane by role inference."""
+        team: dict[str, str] = {}
+        cell_role: dict = {}
+        positioned, floating = [], []
+        for m in members or []:
+            champ = key(m.get("championId"))
+            if not champ:
+                continue
+            role = POSITION_TO_ROLE.get((m.get("assignedPosition") or "").lower())
+            (positioned if role else floating).append((m.get("cellId"), champ, role))
+        for cell, champ, role in positioned:
+            if role not in team:
+                team[role] = champ
+                cell_role[cell] = role
+        for cell, champ, _ in floating:
+            role = _infer_role(champ, team, champ_roles)
+            if role:
+                team[role] = champ
+                cell_role[cell] = role
+        return team, cell_role
 
-    for m in session.get("theirTeam", []) or []:
-        role = POSITION_TO_ROLE.get((m.get("assignedPosition") or "").lower())
-        k = key(m.get("championId"))
-        if role and k:  # usually empty during pick phase (enemy hidden)
-            enemy_team[role] = k
+    my_team, my_cell_role = map_team(session.get("myTeam"))
+    enemy_team, _ = map_team(session.get("theirTeam"))
+
+    # the role we're picking for: where our locked champ landed, else our
+    # assigned lane (known even before we lock a champion).
+    picking_for: Optional[str] = my_cell_role.get(local_cell)
+    if not picking_for:
+        for m in session.get("myTeam", []) or []:
+            if m.get("cellId") == local_cell:
+                picking_for = POSITION_TO_ROLE.get((m.get("assignedPosition") or "").lower())
+                break
 
     return {
         "bans": bans,
@@ -161,8 +201,11 @@ def session_to_draft(session: dict, cmap: dict[int, str]) -> dict:
     }
 
 
-def live_draft() -> dict:
-    """Return {connected, inChampSelect, draft|None, reason?}."""
+def live_draft(champ_roles: Optional[dict] = None) -> dict:
+    """Return {connected, inChampSelect, draft|None, reason?}.
+
+    champ_roles ({champ: [UI roles, most-played first]}) lets the mapper infer a
+    role for picks the client doesn't position (the enemy team, blind/quickplay)."""
     creds = find_credentials()
     if not creds:
         return {"connected": False, "inChampSelect": False, "draft": None,
@@ -180,7 +223,8 @@ def live_draft() -> dict:
         find_credentials(force=True)  # client may have restarted -> refresh next poll
         return {"connected": False, "inChampSelect": False, "draft": None, "reason": str(e)}
 
-    return {"connected": True, "inChampSelect": True, "draft": session_to_draft(session, cmap)}
+    return {"connected": True, "inChampSelect": True,
+            "draft": session_to_draft(session, cmap, champ_roles)}
 
 
 def demo_draft() -> dict:
@@ -191,9 +235,11 @@ def demo_draft() -> dict:
         "inChampSelect": True,
         "demo": True,
         "draft": {
-            "bans": ["Garen", "Yasuo", "Yone"],
-            "myTeam": {"BOT": "Jinx", "SUPPORT": "Thresh", "JUNGLE": "Sejuani"},
-            "enemyTeam": {"MID": "Ahri", "TOP": "Darius"},
+            "bans": ["Garen", "Yasuo", "Yone", "Kayle", "Akali"],
+            "myTeam": {"TOP": "Aatrox", "JUNGLE": "LeeSin", "MID": "Ahri",
+                       "BOT": "Jinx", "SUPPORT": "Thresh"},
+            "enemyTeam": {"TOP": "Darius", "JUNGLE": "Sejuani", "MID": "Zed",
+                          "BOT": "Caitlyn", "SUPPORT": "Lulu"},
             "pickingForRole": "MID",
         },
     }

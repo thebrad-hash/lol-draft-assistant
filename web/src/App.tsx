@@ -1,12 +1,18 @@
 import { useState } from 'react';
+import { LobbyProvider, useLobby } from './lobby';
 import { BansBar } from './components/BansBar';
 import { ChampionPicker } from './components/ChampionPicker';
 import { DraftGrid } from './components/DraftGrid';
+import { LobbyBar } from './components/LobbyBar';
+import { LobbyPanel } from './components/LobbyPanel';
+import { PickOrder } from './components/PickOrder';
+import { PoolPicks } from './components/PoolPicks';
 import { RecommendationsPanel } from './components/RecommendationsPanel';
+import { TeamAnalysis } from './components/TeamAnalysis';
 import { WeightsDrawer } from './components/WeightsDrawer';
 import { DraftProvider, useDraft, type Side } from './store';
 
-type PickerTarget = { type: 'ban' } | { type: 'add'; side: Side } | null;
+type PickerTarget = { type: 'ban' } | { type: 'add'; side: Side } | { type: 'pool' } | null;
 
 function LiveControl() {
   const { live, setLive, liveStatus } = useDraft();
@@ -38,6 +44,7 @@ function LiveControl() {
 
 function Shell() {
   const { state, toggleBan, addPick, reset } = useDraft();
+  const { me, togglePool } = useLobby();
   const [picker, setPicker] = useState<PickerTarget>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -60,6 +67,20 @@ function Shell() {
             toggleBan(id);
             setPicker(null);
           }}
+          onClose={() => setPicker(null)}
+        />
+      );
+    }
+
+    if (picker.type === 'pool') {
+      return (
+        <ChampionPicker
+          title="Your champion pool"
+          roleFilter={me.role}
+          unavailable={new Set()}
+          selected={new Set(me.pool)}
+          selectedLabel="in pool"
+          onSelect={(id) => togglePool(id)} // multi-select: stays open
           onClose={() => setPicker(null)}
         />
       );
@@ -91,6 +112,7 @@ function Shell() {
           </div>
         </div>
         <div className="topbar__actions">
+          <LobbyBar />
           <LiveControl />
           <button className="btn btn--ghost" onClick={reset}>
             Reset draft
@@ -103,9 +125,16 @@ function Shell() {
 
       <BansBar onOpenBanPicker={() => setPicker({ type: 'ban' })} />
 
+      <LobbyPanel onEditPool={() => setPicker({ type: 'pool' })} />
+
       <main className="main">
         <DraftGrid onAdd={(side) => setPicker({ type: 'add', side })} />
-        <RecommendationsPanel />
+        <div className="rightcol">
+          <PickOrder />
+          <TeamAnalysis />
+          <RecommendationsPanel />
+          <PoolPicks />
+        </div>
       </main>
 
       <WeightsDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
@@ -116,8 +145,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <DraftProvider>
-      <Shell />
-    </DraftProvider>
+    <LobbyProvider>
+      <DraftProvider>
+        <Shell />
+      </DraftProvider>
+    </LobbyProvider>
   );
 }

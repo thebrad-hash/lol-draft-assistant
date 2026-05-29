@@ -186,6 +186,28 @@ def cmd_recommend(args):
                 print(f"     {COMP_LABEL[k]:<9} z={val:<7} x{w:<4} = {comp.weighted:+.3f}{detail}")
 
 
+def cmd_evaluate(args):
+    from .evaluate import evaluate_teams
+    with Store() as store:
+        resolve = _build_resolver(store)
+        team_a = _parse_assignments(args.team_a, resolve)
+        team_b = _parse_assignments(args.team_b, resolve)
+        rank = args.rank or store.settings().get("default_rank", config.DEFAULT_RANK)
+        ev = evaluate_teams(store, team_a, team_b, rank=rank, weights=store.weights())
+    sc = ev["score"]
+    print(f"\nTeam A  {sc['a']}  —  {sc['b']}  Team B     (est. win prob A: {ev['winProbA']*100:.0f}%)")
+    c = ev["components"]
+    print(f"  lane edge(A) {c['laneEdge']:+.2f}pp   cross {c['crossEdge']:+.2f}pp   "
+          f"synergy A/B {c['synergyA']:+.2f}/{c['synergyB']:+.2f}  (diff {c['synergyDiff']:+.2f}z)")
+    print("\n  lanes:")
+    for ln in ev["lanes"]:
+        flag = {"A": "A>", "B": "<B", "even": "=="}[ln["favored"]]
+        print(f"    {ln['role']:7} {ln['a']:13} vs {ln['b']:13} {ln['dpp']:+.2f}pp  [{flag}]")
+    print("\n  win conditions:")
+    for s in ev["winConditions"]:
+        print(f"    - {s}")
+
+
 # --- argument parsing ------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -227,6 +249,15 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--top", type=int, default=10, help="how many candidates to show (default 10)")
     pr.add_argument("--explain", action="store_true", help="show per-component contribution breakdown")
     pr.set_defaults(func=cmd_recommend)
+
+    pe = sub.add_parser("evaluate", aliases=["eval", "compare"],
+                        help="score a full 5v5 draft and list win conditions")
+    pe.add_argument("-A", "--team-a", action="append", metavar="ROLE=CHAMP",
+                    help="Team A pick, e.g. -A TOP=Aatrox (repeatable)")
+    pe.add_argument("-B", "--team-b", action="append", metavar="ROLE=CHAMP",
+                    help="Team B pick (repeatable)")
+    pe.add_argument("--rank", choices=config.RANKS)
+    pe.set_defaults(func=cmd_evaluate)
 
     return p
 

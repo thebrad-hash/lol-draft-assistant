@@ -9,9 +9,11 @@ import {
   type ReactNode,
 } from 'react';
 import { getRecommendations } from './api';
+import { getEvaluation } from './evaluateApi';
 import { fetchLive } from './live';
 import { CHAMPIONS_BY_ID } from './mock/champions';
-import type { DraftState, LiveStatus, Recommendation, Role, Weights } from './types';
+import { ROLES } from './types';
+import type { DraftState, LiveStatus, Recommendation, Role, TeamEval, Weights } from './types';
 
 export type Side = 'my' | 'enemy';
 
@@ -37,6 +39,8 @@ interface DraftContextValue {
   loading: boolean;
   live: boolean;
   liveStatus: LiveStatus;
+  evaluation: TeamEval | null;
+  evalLoading: boolean;
   setLive: (on: boolean) => void;
   // mutations
   toggleBan: (championId: string) => void;
@@ -52,7 +56,7 @@ interface DraftContextValue {
 
 const DraftContext = createContext<DraftContextValue | null>(null);
 
-const MAX_BANS = 5;
+const MAX_BANS = 10; // full draft = 10 bans (5 per team)
 
 export function DraftProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DraftState>(INITIAL);
@@ -64,6 +68,9 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     connected: false,
     inChampSelect: false,
   });
+  const [evaluation, setEvaluation] = useState<TeamEval | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const evalReqId = useRef(0);
 
   // --- mutations ---
   const toggleBan = useCallback((championId: string) => {
@@ -143,6 +150,31 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state]);
 
+  // --- full-draft evaluation (only once BOTH teams are locked in) ---
+  useEffect(() => {
+    const full = (t: Partial<Record<Role, string>>) => ROLES.every((r) => Boolean(t[r]));
+    if (!full(state.myTeam) || !full(state.enemyTeam)) {
+      setEvaluation(null);
+      setEvalLoading(false);
+      return;
+    }
+    const id = ++evalReqId.current;
+    setEvalLoading(true);
+    const t = setTimeout(() => {
+      getEvaluation(state)
+        .then((ev) => {
+          if (id === evalReqId.current) {
+            setEvaluation(ev);
+            setEvalLoading(false);
+          }
+        })
+        .catch(() => {
+          if (id === evalReqId.current) setEvalLoading(false);
+        });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [state]);
+
   // --- live champ-select polling (LCU via /api/live) ---
   useEffect(() => {
     if (!live) {
@@ -189,6 +221,8 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       loading,
       live,
       liveStatus,
+      evaluation,
+      evalLoading,
       setLive,
       toggleBan,
       removeBan,
@@ -206,6 +240,8 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       loading,
       live,
       liveStatus,
+      evaluation,
+      evalLoading,
       setLive,
       toggleBan,
       removeBan,

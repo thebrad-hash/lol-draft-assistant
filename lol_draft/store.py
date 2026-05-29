@@ -156,7 +156,10 @@ class Store:
             raise FileNotFoundError(
                 f"No store at {self.db_path}. Run `python -m lol_draft.cli build` first."
             )
-        self.con = sqlite3.connect(self.db_path)
+        # check_same_thread=False: the FastAPI server shares one Store across
+        # threadpool workers; concurrent access is serialized by a lock in
+        # server.py (_store_lock). Single-threaded CLI use is unaffected.
+        self.con = sqlite3.connect(self.db_path, check_same_thread=False)
         self.con.row_factory = sqlite3.Row
 
     def close(self):

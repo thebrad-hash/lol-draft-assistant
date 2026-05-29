@@ -84,3 +84,76 @@ export interface LiveStatus {
   reason?: string;
   draft?: LiveDraft | null;
 }
+
+// --- team-vs-team evaluation (the full-draft verdict) ---
+export interface EvalLane {
+  role: Role;
+  a: string; // your champion id
+  b: string; // enemy champion id
+  dpp: number; // your-perspective lane winrate delta (pct points)
+  favored: 'A' | 'B' | 'even';
+}
+
+export interface EvalSwing {
+  aChamp: string;
+  aRole: Role;
+  bChamp: string;
+  bRole: Role;
+  dpp: number; // your-perspective
+}
+
+export interface SynergyCombo {
+  a: string;
+  b: string;
+  z: number;
+}
+
+export interface TeamEval {
+  complete: boolean;
+  score: { a: number; b: number }; // your / enemy, sums to 100
+  winProbA: number;
+  components: {
+    laneEdge: number; // your-perspective lane pp (sum of 5 lanes)
+    crossEdge: number;
+    synergyA: number;
+    synergyB: number;
+    synergyDiff: number; // your synergy - enemy synergy (z)
+  };
+  lanes: EvalLane[];
+  synergyBest: { a: SynergyCombo | null; b: SynergyCombo | null };
+  swings: { aBest: EvalSwing[]; aWorst: EvalSwing[] };
+  threats: {
+    topEnemy: { champ: string; pressure: number } | null;
+    yourCarry: { champ: string; pressure: number } | null;
+  };
+  winConditions: string[];
+}
+
+export type GetEvaluation = (state: DraftState) => Promise<TeamEval | null>;
+
+// --- pick-order suggestion (which open role to pick next) ---
+export interface PickOrderRole {
+  role: Role;
+  bestChamp: string;
+  bestEv: number;
+  top: { champ: string; ev: number }[];
+  urgency: number; // EV drop-off from best to 3rd-best in this role
+}
+
+export interface PickOrderResult {
+  openRoles: PickOrderRole[]; // sorted by bestEv desc
+  suggested: Role | null;
+}
+
+// --- premade lobby ---
+export interface LobbyMember {
+  memberId: string;
+  name: string;
+  role: Role | null;
+  pool: string[]; // champion ids
+}
+
+export interface Lobby {
+  id: string;
+  members: LobbyMember[];
+}

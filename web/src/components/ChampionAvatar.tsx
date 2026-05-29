@@ -1,12 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-// When a real asset pipeline lands, return the Data Dragon URL here, e.g.:
-//   const V = '14.10.1';
-//   return `https://ddragon.leagueoflegends.com/cdn/${V}/img/champion/${id}.png`;
-// (ids already match Data Dragon keys for most champions). Returning undefined
-// makes the avatar fall back to a colored initials badge.
-export function championIconUrl(_id: string): string | undefined {
-  return undefined;
+// Real champion icons from Riot's Data Dragon CDN. The latest patch version is
+// fetched once (cached) so newly-released champions resolve; if the network/CDN
+// is unavailable the avatar falls back to a colored initials badge (onError).
+const FALLBACK_VERSION = '15.10.1';
+let versionPromise: Promise<string> | null = null;
+
+function ddragonVersion(): Promise<string> {
+  if (!versionPromise) {
+    versionPromise = fetch('https://ddragon.leagueoflegends.com/api/versions.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('versions'))))
+      .then((vs: string[]) => vs[0] || FALLBACK_VERSION)
+      .catch(() => FALLBACK_VERSION);
+  }
+  return versionPromise;
+}
+
+// machineloling roster id -> Data Dragon champion key, for the few that differ.
+// (Most ids already match; unknown/missing ones just fall back to initials.)
+const DDRAGON_ID: Record<string, string> = {
+  Reksai: 'RekSai',
+  RenataGlasc: 'Renata',
+  FiddleSticks: 'Fiddlesticks',
+  Kogmaw: 'KogMaw',
+};
+
+export function championIconUrl(id: string, version: string): string {
+  const key = DDRAGON_ID[id] ?? id;
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${key}.png`;
 }
 
 function hashHue(str: string): number {
@@ -29,8 +50,20 @@ interface Props {
 }
 
 export function ChampionAvatar({ id, name, size = 36, dimmed = false }: Props) {
-  const url = championIconUrl(id);
+  const [version, setVersion] = useState<string | null>(null);
   const [broken, setBroken] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    ddragonVersion().then((v) => {
+      if (active) setVersion(v);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const url = version ? championIconUrl(id, version) : undefined;
   const hue = hashHue(id);
   const style: React.CSSProperties = {
     width: size,
@@ -42,7 +75,7 @@ export function ChampionAvatar({ id, name, size = 36, dimmed = false }: Props) {
   return (
     <span className="avatar" style={style} title={name} aria-label={name}>
       {url && !broken ? (
-        <img src={url} alt={name} onError={() => setBroken(true)} />
+        <img src={url} alt={name} loading="lazy" onError={() => setBroken(true)} />
       ) : (
         <span className="avatar__initials">{initials(name)}</span>
       )}

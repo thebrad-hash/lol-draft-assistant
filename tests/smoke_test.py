@@ -106,13 +106,95 @@ def test_partial_no_penalty(store: Store) -> bool:
     return ok
 
 
+def test_live_mapping() -> bool:
+    """LCU champ-select -> UI draft: the enemy team has NO assignedPosition (the
+    client always hides it), so without role inference every enemy pick is
+    dropped. Verify inference maps them, the local role resolves, and all bans
+    (a full draft has 10) are collected. Pure mapping test: no store needed."""
+    from lol_draft.lcu import session_to_draft
+    print("\n[live] champ-select mapping (hidden enemy positions + 10 bans)")
+    cmap = {1: "Sejuani", 2: "Vayne", 3: "Milio", 4: "Udyr",
+            5: "Sylas", 6: "Pantheon", 7: "Fiora", 8: "Shyvana"}
+    ban_ids = list(range(20, 30))
+    for i, cid in enumerate(ban_ids):
+        cmap[cid] = f"Ban{i}"
+    champ_roles = {
+        "Sylas": ["MID", "TOP"], "Pantheon": ["SUPPORT", "TOP", "MID"],
+        "Fiora": ["TOP"], "Shyvana": ["JUNGLE", "TOP"],
+    }
+    session = {
+        "localPlayerCellId": 2,
+        "myTeam": [
+            {"cellId": 1, "championId": 1, "assignedPosition": "jungle"},
+            {"cellId": 2, "championId": 2, "assignedPosition": "bottom"},
+            {"cellId": 3, "championId": 3, "assignedPosition": "utility"},
+            {"cellId": 4, "championId": 4, "assignedPosition": "top"},
+            {"cellId": 5, "championId": 0, "assignedPosition": "middle"},
+        ],
+        "theirTeam": [  # champion known, assignedPosition hidden -> must infer
+            {"cellId": 6, "championId": 5, "assignedPosition": ""},
+            {"cellId": 7, "championId": 6, "assignedPosition": ""},
+            {"cellId": 8, "championId": 7, "assignedPosition": ""},
+            {"cellId": 9, "championId": 8, "assignedPosition": ""},
+            {"cellId": 10, "championId": 0, "assignedPosition": ""},
+        ],
+        "actions": [[{"type": "ban", "completed": True, "championId": c} for c in ban_ids]],
+        "bans": {},
+    }
+    d = session_to_draft(session, cmap, champ_roles)
+    ok = True
+    if d["myTeam"] != {"JUNGLE": "Sejuani", "BOT": "Vayne", "SUPPORT": "Milio", "TOP": "Udyr"}:
+        print(f"  BAD myTeam={d['myTeam']}"); ok = False
+    if d["pickingForRole"] != "BOT":
+        print(f"  BAD pickingForRole={d['pickingForRole']} (want BOT)"); ok = False
+    if set(d["enemyTeam"].values()) != {"Sylas", "Pantheon", "Fiora", "Shyvana"}:
+        print(f"  BAD enemyTeam={d['enemyTeam']}"); ok = False
+    if len(d["bans"]) != 10:
+        print(f"  BAD bans={len(d['bans'])} (want 10)"); ok = False
+    if ok:
+        print(f"  ok  enemy inferred -> {d['enemyTeam']}")
+        print(f"      bans={len(d['bans'])}  picking={d['pickingForRole']}")
+    return ok
+
+
+def test_team_eval(store: Store) -> bool:
+    """Full 5v5 evaluation: scores sum to 100, all five lanes resolved, win
+    conditions generated, and swapping the teams mirrors the score."""
+    from lol_draft.evaluate import evaluate_teams
+    print("\n[evaluate] full 5v5 scoring + win conditions")
+    A = {"TOP": "Aatrox", "JUNGLE": "LeeSin", "MID": "Ahri", "ADC": "Jinx", "SUP": "Thresh"}
+    B = {"TOP": "Darius", "JUNGLE": "Sejuani", "MID": "Zed", "ADC": "Caitlyn", "SUP": "Lulu"}
+    ev = evaluate_teams(store, A, B)
+    ok = True
+    if not ev["complete"]:
+        print("  BAD eval not marked complete for full teams"); ok = False
+    if ev["score"]["a"] + ev["score"]["b"] != 100:
+        print(f"  BAD scores don't sum to 100: {ev['score']}"); ok = False
+    if len(ev["lanes"]) != 5:
+        print(f"  BAD expected 5 lanes, got {len(ev['lanes'])}"); ok = False
+    if not ev["winConditions"]:
+        print("  BAD no win conditions generated"); ok = False
+    # swapping teams should mirror the score (allow +/-1 for rounding)
+    ev2 = evaluate_teams(store, B, A)
+    if abs(ev2["score"]["a"] - ev["score"]["b"]) > 1:
+        print(f"  BAD not symmetric: AvB.b={ev['score']['b']} BvA.a={ev2['score']['a']}"); ok = False
+    if ok:
+        print(f"  ok  score {ev['score']['a']}-{ev['score']['b']}  "
+              f"laneEdge {ev['components']['laneEdge']:+.2f}  "
+              f"synDiff {ev['components']['synergyDiff']:+.2f}  "
+              f"{len(ev['winConditions'])} conditions")
+    return ok
+
+
 def main() -> int:
     with Store() as store:
         results = [
             test_parity(store),
             test_scoring(store),
             test_partial_no_penalty(store),
+            test_team_eval(store),
         ]
+    results.append(test_live_mapping())
     passed = all(results)
     print("\n==== " + ("ALL TESTS PASSED" if passed else "SOME TESTS FAILED") + " ====")
     return 0 if passed else 1

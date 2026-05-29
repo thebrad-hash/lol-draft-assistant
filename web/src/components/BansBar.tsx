@@ -2,7 +2,8 @@ import { CHAMPIONS_BY_ID } from '../mock/champions';
 import { useDraft } from '../store';
 import { ChampionAvatar } from './ChampionAvatar';
 
-const MAX_BANS = 5;
+// A full draft has 10 bans (5 per team); live sync surfaces both teams'.
+const MAX_BANS = 10;
 
 export function BansBar({ onOpenBanPicker }: { onOpenBanPicker: () => void }) {
   const { state, removeBan } = useDraft();
