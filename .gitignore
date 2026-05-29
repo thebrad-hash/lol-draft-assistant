@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / web build
+web/node_modules/
+web/dist/
+
+# Rebuildable artifacts (regenerate with: draft.bat build)
+data/draft.db
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Keep: data/raw/* (source data) and web/src/mock/champions.ts (generated, committed)
