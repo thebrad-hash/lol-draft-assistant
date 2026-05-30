@@ -18,7 +18,11 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import config, decode, fetch
+from . import config
+
+# NB: `decode` (which imports numpy) and `fetch` are imported lazily inside
+# build_db() — so importing Store for READ access (the CLI/server/inference
+# path) never pulls numpy. Keeps the Vercel serverless function lean.
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -50,6 +54,8 @@ CREATE TABLE IF NOT EXISTS blindability (
 def build_db(db_path: Path | None = None, raw_dir: Path | None = None,
              *, force_fetch: bool = False) -> Path:
     """(Re)build the SQLite store from the cached/downloaded static files."""
+    from . import decode, fetch  # lazy: only the (re)build path needs numpy
+
     db_path = db_path or config.DB_PATH
     raw_dir = raw_dir or config.RAW_DIR
     db_path.parent.mkdir(parents=True, exist_ok=True)

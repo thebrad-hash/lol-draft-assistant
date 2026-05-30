@@ -1,0 +1,5 @@
+# Serverless function deps ONLY (kept minimal for small bundle + fast cold start).
+# The serve path is numpy-free (store.py imports decode/fetch lazily), so the
+# engine, win-probability model inference, and FastAPI need just this. numpy /
+# scikit-learn / uvicorn are dev/build/train-only — see the repo-root requirements.txt.
+fastapi>=0.110

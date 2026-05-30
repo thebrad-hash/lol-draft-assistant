@@ -8,15 +8,17 @@ venv/
 web/node_modules/
 web/dist/
 
-# Rebuildable artifacts (regenerate with: draft.bat build)
-data/draft.db
+# data/draft.db is COMMITTED (not ignored) so the Vercel function ships with its
+# data and needs no build step. Rebuild locally any time with: draft.bat build
 
 # Collected match outcomes (re-collectable via lol_draft.collect; can be large,
 # and labels are tied to a key/region — keep out of git)
 data/games/
 
-# Trained model artifacts (rebuildable via lol_draft.train from data/games/)
-data/models/
+# Trained model artifacts: commit the DEPLOYED model (Vercel needs it), ignore
+# experimental variants (e.g. winprob_allpatches.json).
+data/models/*
+!data/models/winprob.json
 
 # OS junk
 Thumbs.db
