@@ -5,6 +5,7 @@ CLI and are persisted (and editable) in the SQLite store.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 # --- Roles (must match index.json keys exactly) ---
@@ -49,7 +50,12 @@ DEFAULT_AGG = "mean"
 DEFAULT_TOP_N = 3
 
 # --- Paths ---
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+# In the PyInstaller "desktop" build the app is frozen and bundled data lives in
+# the extraction dir (sys._MEIPASS); otherwise paths are relative to the repo.
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    PROJECT_DIR = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+else:
+    PROJECT_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_DIR / "data" / "raw"
 DB_PATH = PROJECT_DIR / "data" / "draft.db"
 

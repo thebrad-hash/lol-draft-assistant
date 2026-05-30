@@ -22,6 +22,11 @@ data/games/
 data/models/*
 !data/models/winprob.json
 
+# PyInstaller desktop build (large binary; distribute via a Release, not git)
+/build/
+/dist/
+*.spec
+
 # OS junk
 Thumbs.db
 .DS_Store

@@ -406,7 +406,7 @@ def leave_lobby(lobby_id: str, member_id: str):
 # After `cd web && npm run build`, the whole app is reachable here, so a single
 # tunnel to this port lets friends open the lobby link. Mounted last so it never
 # shadows the /api/* routes above.
-_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+_DIST = config.PROJECT_DIR / "web" / "dist"
 if _DIST.is_dir():
     app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="web")
 
