@@ -6,7 +6,9 @@ venv/
 
 # Node / web build
 web/node_modules/
-web/dist/
+# web/dist is COMMITTED for Vercel: the FastAPI serverless function serves it as
+# static files (single-function deploy). Rebuild + commit after frontend changes:
+#   cd web && npm run build
 
 # data/draft.db is COMMITTED (not ignored) so the Vercel function ships with its
 # data and needs no build step. Rebuild locally any time with: draft.bat build

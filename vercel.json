@@ -1,12 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "builds": [
-    { "src": "web/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "api/index.py", "use": "@vercel/python", "config": { "includeFiles": "data/**" } }
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": ["data/**", "web/dist/**"] }
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/api/index.py" }
   ]
 }
