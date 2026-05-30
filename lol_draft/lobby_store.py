@@ -29,11 +29,12 @@ _KEY = "lobby:{}"
 
 # --- backend selection ---
 def _url() -> str | None:
-    return os.environ.get("UPSTASH_REDIS_REST_URL")
+    # UPSTASH_* (manual Upstash DB) or KV_REST_API_* (Vercel Marketplace integration)
+    return os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 
 
 def _token() -> str | None:
-    return os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+    return os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
 
 
 def redis_enabled() -> bool:
