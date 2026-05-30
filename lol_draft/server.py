@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, lcu
+from . import config, lcu, lobby_store
 from .evaluate import evaluate_teams
 from .features import FEATURE_NAMES
 from .model import WinProbModel, default_model_path
@@ -357,11 +357,8 @@ def pick_order(state: PickOrderIn):
     return {"openRoles": rows, "suggested": rows[0]["role"] if rows else None}
 
 
-# --- premade lobby (in-memory; one host process, friends poll over the link) ---
-_lobbies: dict[str, dict] = {}
-_lobby_lock = threading.Lock()
-
-
+# --- premade lobby: persisted via lobby_store (Redis on Vercel, in-memory locally)
+# so a shared lobby survives serverless invocations. Same REST contract as before.
 class MemberIn(BaseModel):
     memberId: str
     name: str = "Player"
@@ -369,54 +366,40 @@ class MemberIn(BaseModel):
     pool: list[str] = []            # champion ids the player wants to play
 
 
-def _lobby_view(lobby: dict) -> dict:
-    return {
-        "id": lobby["id"],
-        "members": [{"memberId": mid, **m} for mid, m in lobby["members"].items()],
-    }
-
-
 @app.post("/api/lobby")
 def create_lobby():
     """Create an empty lobby; the client shares <origin>/?lobby=<id>."""
-    lid = secrets.token_urlsafe(6)
-    with _lobby_lock:
-        _lobbies[lid] = {"id": lid, "members": {}}
-    return {"id": lid}
+    return lobby_store.create(secrets.token_urlsafe(6))
 
 
 @app.get("/api/lobby/{lobby_id}")
 def get_lobby(lobby_id: str):
-    with _lobby_lock:
-        lobby = _lobbies.get(lobby_id)
-        if lobby is None:
-            raise HTTPException(status_code=404, detail="Lobby not found")
-        return _lobby_view(lobby)
+    view = lobby_store.get(lobby_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    return view
 
 
 @app.put("/api/lobby/{lobby_id}/member")
 def upsert_member(lobby_id: str, member: MemberIn):
     """Add or update a member's name / role / champion pool (clients poll GET)."""
-    with _lobby_lock:
-        lobby = _lobbies.get(lobby_id)
-        if lobby is None:
-            raise HTTPException(status_code=404, detail="Lobby not found")
-        lobby["members"][member.memberId] = {
-            "name": (member.name or "Player")[:24],
-            "role": member.role,
-            "pool": list(dict.fromkeys(member.pool))[:30],  # de-dupe, cap
-        }
-        return _lobby_view(lobby)
+    data = {
+        "name": (member.name or "Player")[:24],
+        "role": member.role,
+        "pool": list(dict.fromkeys(member.pool))[:30],  # de-dupe, cap
+    }
+    view = lobby_store.upsert_member(lobby_id, member.memberId, data)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    return view
 
 
 @app.delete("/api/lobby/{lobby_id}/member/{member_id}")
 def leave_lobby(lobby_id: str, member_id: str):
-    with _lobby_lock:
-        lobby = _lobbies.get(lobby_id)
-        if lobby is None:
-            raise HTTPException(status_code=404, detail="Lobby not found")
-        lobby["members"].pop(member_id, None)
-        return _lobby_view(lobby)
+    view = lobby_store.remove_member(lobby_id, member_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    return view
 
 
 # --- serve the built web UI on this same port (tunnel-friendly) ---

@@ -113,7 +113,9 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       }
     };
     void sync(true);
-    const iv = setInterval(() => void sync(false), 2000);
+    // 5s poll: snappy enough for pool coordination, and keeps a 5-stack well
+    // within a free Redis tier's command budget when the lobby is server-backed.
+    const iv = setInterval(() => void sync(false), 5000);
     return () => {
       cancelled = true;
       clearInterval(iv);
