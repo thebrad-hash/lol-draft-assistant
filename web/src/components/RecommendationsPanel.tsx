@@ -17,6 +17,9 @@ export function RecommendationsPanel() {
         </h2>
         {loading && <span className="recos__spinner" aria-label="Updating" />}
       </div>
+      {recommendations[0]?.winProb != null && (
+        <div className="recos__subnote">ranked by calibrated win probability</div>
+      )}
       {autoNote && (
         <div className="recos__autonote" title={weightNotes.join(' · ')}>
           ⚖ auto · {autoNote}

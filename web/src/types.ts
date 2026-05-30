@@ -56,6 +56,13 @@ export interface Contribution {
   value: number; // signed z-score (raw, pre-weight)
 }
 
+export interface DraftFeatures {
+  lane_z: number;
+  counter_z: number;
+  synergy_z: number;
+  champ_strength: number;
+}
+
 export interface Recommendation {
   championId: string;
   championName: string;
@@ -64,6 +71,11 @@ export interface Recommendation {
   // Blind-pick safety vs the meta field (standardized z). Folded into totalEv
   // via weights.blindability. Optional so a backend may omit it.
   blindabilityZ?: number;
+  // Calibrated P(win) in [0,1] from the logistic model (the headline number),
+  // plus the team feature vector behind it. Present from the real backend;
+  // omitted by the offline mock, in which case the UI falls back to totalEv.
+  winProb?: number | null;
+  features?: DraftFeatures | null;
 }
 
 // The single async function the whole app depends on.
@@ -135,13 +147,14 @@ export type GetEvaluation = (state: DraftState) => Promise<TeamEval | null>;
 export interface PickOrderRole {
   role: Role;
   bestChamp: string;
-  bestEv: number;
-  top: { champ: string; ev: number }[];
-  urgency: number; // EV drop-off from best to 3rd-best in this role
+  bestEv: number | null; // additive-z EV; null when ranked by win probability
+  bestWin?: number | null; // calibrated P(win) of the best available pick (0..1)
+  top: { champ: string; ev?: number; win?: number }[];
+  urgency: number; // drop-off (best -> 3rd) in the active metric: win prob, else EV
 }
 
 export interface PickOrderResult {
-  openRoles: PickOrderRole[]; // sorted by bestEv desc
+  openRoles: PickOrderRole[]; // sorted by the active metric (win prob, else EV) desc
   suggested: Role | null;
 }
 

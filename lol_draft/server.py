@@ -24,9 +24,12 @@ from pydantic import BaseModel
 
 from . import config, lcu
 from .evaluate import evaluate_teams
+from .features import FEATURE_NAMES
+from .model import WinProbModel, default_model_path
 from .scoring import DraftState, score_draft
 from .store import Store
 from .weights import dynamic_weights
+from .winprob import rank_candidates
 
 # --- role mapping (UI <-> engine) ---
 UI_TO_ENGINE_ROLE = {
@@ -74,6 +77,8 @@ app.add_middleware(
 
 _store: Optional[Store] = None
 _store_lock = threading.Lock()  # serialize access to the one shared sqlite connection
+_model: Optional[WinProbModel] = None
+_model_loaded = False
 
 
 def get_store() -> Store:
@@ -81,6 +86,20 @@ def get_store() -> Store:
     if _store is None:
         _store = Store()  # raises if the DB hasn't been built yet
     return _store
+
+
+def get_model() -> Optional[WinProbModel]:
+    """The calibrated win-probability model, loaded once. None if it hasn't been
+    trained yet (`python -m lol_draft.train`), in which case /api/recommend falls
+    back to ranking by the legacy additive-z EV."""
+    global _model, _model_loaded
+    if not _model_loaded:
+        try:
+            _model = WinProbModel.load(default_model_path())
+        except (FileNotFoundError, ValueError):
+            _model = None
+        _model_loaded = True
+    return _model
 
 
 def _map_roles(team: dict[str, str]) -> dict[str, str]:
@@ -151,22 +170,35 @@ def recommend(state: DraftStateIn):
         bans=list(state.bans),
         pool=state.poolFilter,
     )
+    rank = state.rank or config.DEFAULT_RANK
     try:
         with _store_lock:  # one shared sqlite connection -> serialize queries
-            results, _warnings = score_draft(
-                get_store(), ds, rank=state.rank or config.DEFAULT_RANK, weights=weights
-            )
+            store = get_store()
+            results, _warnings = score_draft(store, ds, rank=rank, weights=weights)
+            model = get_model()
+            wp_results = []
+            if model is not None:  # rank_candidates also hits the store -> same lock
+                wp_results, _ = rank_candidates(store, ds, model, rank=rank)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # engine components -> flat web contributions
+    # engine components -> flat web contributions (kept for the per-pick "why")
     comp_specs = [
         ("in_lane", "in_lane_z", "counter", "enemy"),
         ("out_of_lane", "out_of_lane_z", "counter", "enemy"),
         ("synergy", "synergy_z", "synergy", "ally"),
     ]
+    by_champ = {cs.champion: cs for cs in results}
+    wp_by_champ = {r.champion: r for r in wp_results}
+    # rank by calibrated win probability when the model is available; else by EV
+    order = ([r.champion for r in wp_results] if model is not None
+             else [cs.champion for cs in results])
+
     out = []
-    for cs in results[: max(1, state.limit)]:
+    for champ in order[: max(1, state.limit)]:
+        cs = by_champ.get(champ)
+        if cs is None:
+            continue
         contribs = []
         for key, metric, kind, side in comp_specs:
             for c in cs.components[key].contributions:
@@ -182,11 +214,15 @@ def recommend(state: DraftStateIn):
                 )
         contribs.sort(key=lambda x: abs(x["value"]), reverse=True)
         bz = cs.components["blindability"].value
+        wp = wp_by_champ.get(champ)
         out.append(
             {
-                "championId": cs.champion,
-                "championName": cs.champion,  # web resolves a display name locally
+                "championId": champ,
+                "championName": champ,  # web resolves a display name locally
                 "totalEv": round(cs.total, 3),
+                "winProb": round(wp.win_prob, 4) if wp is not None else None,
+                "features": ({k: round(wp.features[k], 3) for k in FEATURE_NAMES}
+                             if wp is not None else None),
                 "contributions": contribs,
                 "blindabilityZ": round(bz, 3) if bz is not None else None,
             }
@@ -262,7 +298,10 @@ class PickOrderIn(BaseModel):
 @app.post("/api/pick-order")
 def pick_order(state: PickOrderIn):
     """Given picks + bans on both teams, rank the OPEN roles on your team by the
-    EV of the best champion still available for each — i.e. where to pick next."""
+    best still-available champion for each — i.e. where to pick next. Uses the
+    calibrated win-probability model when available (the additive-z `weights` /
+    `auto` are then irrelevant — the model owns the weighting); else falls back
+    to the additive-z EV."""
     weights = {
         "in_lane": state.weights.inLane,
         "out_of_lane": state.weights.outOfLane,
@@ -277,25 +316,44 @@ def pick_order(state: PickOrderIn):
     try:
         with _store_lock:  # one shared sqlite connection -> serialize queries
             store = get_store()
+            model = get_model()
             for role in open_roles:
-                w = dynamic_weights(weights, role, enemies, allies)[0] if state.auto else weights
                 ds = DraftState(my_role=role, enemies=enemies, allies=allies,
                                 bans=list(state.bans), pool=state.poolFilter)
-                results, _ = score_draft(store, ds, rank=rank, weights=w)
-                if not results:
-                    continue
-                top = results[0]
-                tail = results[min(2, len(results) - 1)]
-                rows.append({
-                    "role": ENGINE_TO_UI_ROLE.get(role, role),
-                    "bestChamp": top.champion,
-                    "bestEv": round(top.total, 3),
-                    "top": [{"champ": r.champion, "ev": round(r.total, 3)} for r in results[:3]],
-                    "urgency": round(top.total - tail.total, 3),  # drop-off best -> 3rd
-                })
+                if model is not None:
+                    cands, _ = rank_candidates(store, ds, model, rank=rank)
+                    if not cands:
+                        continue
+                    best, tail = cands[0], cands[min(2, len(cands) - 1)]
+                    rows.append({
+                        "role": ENGINE_TO_UI_ROLE.get(role, role),
+                        "bestChamp": best.champion,
+                        "bestWin": round(best.win_prob, 4),
+                        "bestEv": None,
+                        "top": [{"champ": c.champion, "win": round(c.win_prob, 4)} for c in cands[:3]],
+                        "urgency": round(best.win_prob - tail.win_prob, 4),  # win-prob drop best -> 3rd
+                        "_sort": best.win_prob,
+                    })
+                else:
+                    w = dynamic_weights(weights, role, enemies, allies)[0] if state.auto else weights
+                    results, _ = score_draft(store, ds, rank=rank, weights=w)
+                    if not results:
+                        continue
+                    top, tail = results[0], results[min(2, len(results) - 1)]
+                    rows.append({
+                        "role": ENGINE_TO_UI_ROLE.get(role, role),
+                        "bestChamp": top.champion,
+                        "bestWin": None,
+                        "bestEv": round(top.total, 3),
+                        "top": [{"champ": r.champion, "ev": round(r.total, 3)} for r in results[:3]],
+                        "urgency": round(top.total - tail.total, 3),  # EV drop best -> 3rd
+                        "_sort": top.total,
+                    })
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    rows.sort(key=lambda x: x["bestEv"], reverse=True)
+    rows.sort(key=lambda x: x["_sort"], reverse=True)
+    for x in rows:
+        del x["_sort"]
     return {"openRoles": rows, "suggested": rows[0]["role"] if rows else None}
 
 

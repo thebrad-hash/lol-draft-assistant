@@ -28,7 +28,8 @@ function describe(c: Contribution): string {
 }
 
 export function RecommendationCard({ rank, rec }: { rank: number; rec: Recommendation }) {
-  const positive = rec.totalEv >= 0;
+  const hasWin = typeof rec.winProb === 'number';
+  const favorable = hasWin ? (rec.winProb as number) >= 0.5 : rec.totalEv >= 0;
   return (
     <li className="card">
       <div className="card__rank">{rank}</div>
@@ -39,9 +40,17 @@ export function RecommendationCard({ rank, rec }: { rank: number; rec: Recommend
             <span className="card__name">{rec.championName}</span>
             <CoachlessLink championId={rec.championId} compact />
           </span>
-          <span className={'card__ev ' + (positive ? 'pos' : 'neg')}>
-            {fmtSigned(rec.totalEv)}
-          </span>
+          {hasWin ? (
+            <span
+              className={'card__ev ' + (favorable ? 'pos' : 'neg')}
+              title={`calibrated win probability · additive-z EV ${fmtSigned(rec.totalEv)}`}
+            >
+              {((rec.winProb as number) * 100).toFixed(1)}
+              <span className="card__win-unit">% win</span>
+            </span>
+          ) : (
+            <span className={'card__ev ' + (favorable ? 'pos' : 'neg')}>{fmtSigned(rec.totalEv)}</span>
+          )}
         </div>
         <ul className="contribs">
           {rec.contributions.length === 0 && (

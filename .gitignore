@@ -11,6 +11,13 @@ web/dist/
 # Rebuildable artifacts (regenerate with: draft.bat build)
 data/draft.db
 
+# Collected match outcomes (re-collectable via lol_draft.collect; can be large,
+# and labels are tied to a key/region — keep out of git)
+data/games/
+
+# Trained model artifacts (rebuildable via lol_draft.train from data/games/)
+data/models/
+
 # OS junk
 Thumbs.db
 .DS_Store

@@ -221,6 +221,22 @@ class Store:
         )
         return {r["champion"]: r["pick_rate"] for r in cur.fetchall()}
 
+    def win_rate(self, rank: str, role: str, champ: str) -> float | None:
+        """Champion's marginal win rate at this rank/role (0..1), or None."""
+        cur = self.con.execute(
+            "SELECT win_rate FROM playrates WHERE rank=? AND role=? AND champion=?",
+            (rank, role, champ),
+        )
+        row = cur.fetchone()
+        return row["win_rate"] if row else None
+
+    def win_rates(self, rank: str, role: str) -> dict[str, float]:
+        cur = self.con.execute(
+            "SELECT champion, win_rate FROM playrates WHERE rank=? AND role=?",
+            (rank, role),
+        )
+        return {r["champion"]: r["win_rate"] for r in cur.fetchall()}
+
     # --- blindability (oracle-derived field-safety) ---
     def blindability(self, rank: str, role: str) -> dict[str, dict[str, float]]:
         """{champion: {lane_matchup, out_of_lane_matchup, out_of_lane_synergy,

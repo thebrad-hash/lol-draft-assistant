@@ -3,3 +3,7 @@ numpy>=1.24
 # Optional: only needed to run the HTTP API (lol_draft.server) for the web UI.
 fastapi>=0.110
 uvicorn>=0.27
+
+# Calibrated win-probability model (training + inference): the logistic
+# regression that replaces additive-z scoring. (pulls in scipy + joblib)
+scikit-learn>=1.4
