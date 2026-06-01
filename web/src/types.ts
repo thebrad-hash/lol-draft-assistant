@@ -78,6 +78,17 @@ export interface Recommendation {
   features?: DraftFeatures | null;
 }
 
+// --- all-roles board (top picks for every role at once) ---
+export interface BoardRole {
+  role: Role;
+  picked: string | null; // champion id your team already locked in this role
+  picks: Recommendation[];
+}
+
+export interface BoardResult {
+  roles: BoardRole[];
+}
+
 // The single async function the whole app depends on.
 export type GetRecommendations = (state: DraftState) => Promise<Recommendation[]>;
 

@@ -5,9 +5,9 @@ import { ChampionPicker } from './components/ChampionPicker';
 import { DraftGrid } from './components/DraftGrid';
 import { LobbyBar } from './components/LobbyBar';
 import { LobbyPanel } from './components/LobbyPanel';
+import { AllRolesBoard } from './components/AllRolesBoard';
 import { PickOrder } from './components/PickOrder';
 import { PoolPicks } from './components/PoolPicks';
-import { RecommendationsPanel } from './components/RecommendationsPanel';
 import { TeamAnalysis } from './components/TeamAnalysis';
 import { WeightsDrawer } from './components/WeightsDrawer';
 import { DraftProvider, useDraft, type Side } from './store';
@@ -128,14 +128,14 @@ function Shell() {
       <LobbyPanel onEditPool={() => setPicker({ type: 'pool' })} />
 
       <main className="main">
-        <DraftGrid onAdd={(side) => setPicker({ type: 'add', side })} />
+        <div className="leftcol">
+          <DraftGrid onAdd={(side) => setPicker({ type: 'add', side })} />
+          <AllRolesBoard />
+        </div>
         <div className="rightcol">
           <PickOrder />
           <TeamAnalysis />
-          <div className="recos-row">
-            <RecommendationsPanel />
-            <PoolPicks />
-          </div>
+          <PoolPicks />
         </div>
       </main>
 

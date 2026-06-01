@@ -88,7 +88,7 @@ h3 {
 
 .main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(440px, 820px);
+  grid-template-columns: minmax(0, 1fr) 440px;
   gap: 16px;
   padding: 16px;
   align-items: start;
@@ -907,6 +907,14 @@ input[type='range'] {
   color: var(--gold);
 }
 
+/* ---------------- left column (draft grid + all-roles board) ---------------- */
+.leftcol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
 /* ---------------- right column + team analysis ---------------- */
 .rightcol {
   display: flex;
@@ -1400,4 +1408,172 @@ input[type='range'] {
   border: 1px solid rgba(200, 170, 110, 0.25);
   border-radius: 7px;
   padding: 4px 8px;
+}
+
+/* ---------------- all-roles board ---------------- */
+.board {
+  background: linear-gradient(180deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.board__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.board__head h2 {
+  font-size: 15px;
+}
+.board__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.board__col {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 0;
+}
+.board__col.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(255, 157, 60, 0.25);
+}
+.board__role {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.board__col.is-active .board__role {
+  color: var(--text);
+}
+.board__locked {
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--pos);
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.board__lockedpick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.board__picks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.board__hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+.boardpick {
+  border-radius: 7px;
+  background: var(--panel-3);
+}
+.boardpick__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 5px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.boardpick__row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.boardpick.is-open {
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+.boardpick__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px 7px 7px;
+}
+.bpd__row {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.bpd__val {
+  flex: none;
+  width: 40px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bpd__row.pos .bpd__val {
+  color: var(--pos);
+}
+.bpd__row.neg .bpd__val {
+  color: var(--neg);
+}
+.bpd__text {
+  color: var(--muted);
+  min-width: 0;
+}
+.bpd__muted {
+  color: var(--muted);
+  font-style: italic;
+}
+.boardpick__rank {
+  font-size: 10px;
+  color: var(--muted);
+  width: 12px;
+  text-align: center;
+  flex: none;
+}
+.boardpick .avatar {
+  flex: none;
+}
+.boardpick__name {
+  font-size: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.boardpick .coachless-link {
+  flex: none;
+}
+.boardpick__ev {
+  font-size: 11.5px;
+  font-weight: 700;
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.boardpick__ev.pos {
+  color: var(--pos);
+}
+.boardpick__ev.neg {
+  color: var(--neg);
+}
+.boardpick--empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px;
 }

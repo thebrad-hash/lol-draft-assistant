@@ -357,6 +357,92 @@ def pick_order(state: PickOrderIn):
     return {"openRoles": rows, "suggested": rows[0]["role"] if rows else None}
 
 
+def _format_picks(results, wp_results, model, limit: int) -> list:
+    """engine results -> web Recommendation dicts. Mirrors /api/recommend: ranks
+    by calibrated win-prob when the model is available, else by additive-z EV."""
+    comp_specs = [
+        ("in_lane", "in_lane_z", "counter", "enemy"),
+        ("out_of_lane", "out_of_lane_z", "counter", "enemy"),
+        ("synergy", "synergy_z", "synergy", "ally"),
+    ]
+    by_champ = {cs.champion: cs for cs in results}
+    wp_by_champ = {r.champion: r for r in wp_results}
+    order = ([r.champion for r in wp_results] if model is not None
+             else [cs.champion for cs in results])
+    out = []
+    for champ in order[: max(1, limit)]:
+        cs = by_champ.get(champ)
+        if cs is None:
+            continue
+        contribs = []
+        for key, metric, kind, side in comp_specs:
+            for c in cs.components[key].contributions:
+                contribs.append({
+                    "kind": kind, "targetChampion": c.name,
+                    "targetRole": ENGINE_TO_UI_ROLE.get(c.role, c.role),
+                    "side": side, "metric": metric, "value": round(c.z, 3),
+                })
+        contribs.sort(key=lambda x: abs(x["value"]), reverse=True)
+        bz = cs.components["blindability"].value
+        wp = wp_by_champ.get(champ)
+        out.append({
+            "championId": champ, "championName": champ,
+            "totalEv": round(cs.total, 3),
+            "winProb": round(wp.win_prob, 4) if wp is not None else None,
+            "features": ({k: round(wp.features[k], 3) for k in FEATURE_NAMES} if wp is not None else None),
+            "contributions": contribs,
+            "blindabilityZ": round(bz, 3) if bz is not None else None,
+        })
+    return out
+
+
+class BoardIn(BaseModel):
+    myTeam: dict[str, str] = {}
+    enemyTeam: dict[str, str] = {}
+    bans: list[str] = []
+    weights: WeightsIn = WeightsIn()
+    rank: Optional[str] = None
+    auto: bool = False
+    limit: int = 4
+
+
+@app.post("/api/board")
+def board(state: BoardIn):
+    """Top picks for EVERY role given both teams' picks (the all-roles board).
+    Same scoring as /api/recommend per role; roles your team has already locked
+    come back as {picked} with an empty list."""
+    weights = {
+        "in_lane": state.weights.inLane,
+        "out_of_lane": state.weights.outOfLane,
+        "synergy": state.weights.synergy,
+        "blindability": state.weights.blindability,
+    }
+    allies = _map_roles(state.myTeam)
+    enemies = _map_roles(state.enemyTeam)
+    rank = state.rank or config.DEFAULT_RANK
+    out = []
+    try:
+        with _store_lock:  # one shared sqlite connection -> serialize queries
+            store = get_store()
+            model = get_model()
+            for role in config.ROLES:
+                ui = ENGINE_TO_UI_ROLE.get(role, role)
+                if allies.get(role):  # already locked on my team
+                    out.append({"role": ui, "picked": allies[role], "picks": []})
+                    continue
+                w = dynamic_weights(weights, role, enemies, allies)[0] if state.auto else weights
+                ds = DraftState(my_role=role, enemies=enemies, allies=allies, bans=list(state.bans))
+                results, _ = score_draft(store, ds, rank=rank, weights=w)
+                wp_results = []
+                if model is not None:
+                    wp_results, _ = rank_candidates(store, ds, model, rank=rank)
+                out.append({"role": ui, "picked": None,
+                            "picks": _format_picks(results, wp_results, model, state.limit)})
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return {"roles": out}
+
+
 # --- premade lobby: persisted via lobby_store (Redis on Vercel, in-memory locally)
 # so a shared lobby survives serverless invocations. Same REST contract as before.
 class MemberIn(BaseModel):
