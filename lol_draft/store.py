@@ -236,6 +236,20 @@ class Store:
         row = cur.fetchone()
         return row["win_rate"] if row else None
 
+    def win_rate_games(self, rank: str, role: str, champ: str) -> tuple[float, int] | None:
+        """(win_rate, games) for the champion at this rank/role, or None. `games`
+        is the sample size behind win_rate — it lets callers attach a binomial
+        standard error √(wr(1-wr)/games) to champ_strength (the one feature whose
+        per-champion N machineloling actually publishes)."""
+        cur = self.con.execute(
+            "SELECT win_rate, games FROM playrates WHERE rank=? AND role=? AND champion=?",
+            (rank, role, champ),
+        )
+        row = cur.fetchone()
+        if row is None or row["win_rate"] is None:
+            return None
+        return float(row["win_rate"]), int(row["games"] or 0)
+
     def win_rates(self, rank: str, role: str) -> dict[str, float]:
         cur = self.con.execute(
             "SELECT champion, win_rate FROM playrates WHERE rank=? AND role=?",

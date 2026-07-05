@@ -1,19 +1,22 @@
+/* Legacy variable names remapped onto the hextech token system (tokens.css).
+   Existing component rules reference these aliases, so the whole app recolors to
+   the League palette in one place; champ-select.css then re-skins structure. */
 :root {
-  --bg: #090c11;
-  --bg-2: #0d1219;
-  --panel: #111923;
-  --panel-2: #16202c;
-  --panel-3: #1d2937;
-  --border: #25323f;
-  --border-2: #34465a;
-  --text: #e7ebf2;
-  --muted: #8b97a8;
-  --gold: #c8aa6e;
-  --accent: #ff9d3c;
-  --accent-2: #f0902a;
-  --pos: #4cd17e;
-  --neg: #ff5f6d;
-  --ally: #6fc6ff;
+  --bg: var(--void-900);
+  --bg-2: var(--void-800);
+  --panel: #081523;
+  --panel-2: #0b1d30;
+  --panel-3: #11293f;
+  --border: #1c2c3a;
+  --border-2: var(--gold-500);
+  --text: var(--gold-100);
+  --muted: var(--grey-300);
+  --gold: var(--gold-300);
+  --accent: var(--gold-300);
+  --accent-2: var(--gold-400);
+  --pos: var(--c-win);
+  --neg: var(--c-loss);
+  --ally: var(--c-ally);
   color-scheme: dark;
 }
 
@@ -30,12 +33,15 @@ body,
 
 body {
   background:
-    radial-gradient(1200px 600px at 75% -10%, #14233022, transparent),
-    linear-gradient(180deg, #0b0f15, var(--bg));
+    radial-gradient(1100px 520px at 50% -8%, rgba(5, 150, 170, 0.12), transparent 70%),
+    radial-gradient(900px 700px at 100% 0%, rgba(200, 170, 110, 0.06), transparent 60%),
+    radial-gradient(900px 700px at 0% 0%, rgba(200, 170, 110, 0.06), transparent 60%),
+    linear-gradient(180deg, #04111d 0%, var(--void-900) 60%);
   color: var(--text);
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
@@ -84,6 +90,53 @@ h3 {
 .topbar__actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* ---------------- model dataset toggle ---------------- */
+.dataset-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+}
+.dataset-toggle__label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dataset-toggle__select {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--gold);
+  font: inherit;
+  font-size: 13px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.dataset-toggle__select:hover {
+  border-color: var(--gold);
+}
+.dataset-toggle__select option {
+  color: #111;
+}
+.dataset-toggle__meta {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dataset-toggle__meta.is-thin {
+  color: var(--accent-2);
+}
+@media (max-width: 1080px) {
+  .dataset-toggle__meta {
+    display: none;
+  }
 }
 
 .main {
@@ -114,10 +167,6 @@ h3 {
   font-weight: 800;
   letter-spacing: 1.5px;
   color: var(--neg);
-}
-.bans__slots {
-  display: flex;
-  gap: 8px;
 }
 .banslot {
   width: 46px;
@@ -324,92 +373,6 @@ h3 {
   background: rgba(200, 170, 110, 0.09);
 }
 
-.slot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-2);
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-}
-.team--ally .slot {
-  border-left: 3px solid #2c5d77;
-}
-.team--enemy .slot {
-  border-left: 3px solid #6e2f39;
-}
-.slot--picking {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 18px -6px var(--accent);
-  background: linear-gradient(90deg, #2a1e0e, var(--panel-2));
-}
-.slot__role {
-  width: 38px;
-  text-align: center;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-}
-.slot__main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  min-width: 0;
-  padding: 2px 0;
-  font: inherit;
-}
-.slot__name {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.slot__placeholder {
-  color: var(--muted);
-}
-.slot__main:hover .slot__placeholder {
-  color: var(--accent);
-}
-.slot__actions {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-.slot__pick,
-.slot__clear {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1px solid var(--border-2);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.slot__pick:hover,
-.slot__clear:hover {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.slot__pick.is-active {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: #2a1e0e;
-}
-
 /* ---------------- avatar ---------------- */
 .avatar {
   border-radius: 8px;
@@ -491,117 +454,22 @@ h3 {
   overflow: auto;
 }
 
-.card {
-  display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-2);
-  align-items: flex-start;
-}
-.card:hover {
-  border-color: var(--border-2);
-}
-.card__rank {
-  width: 20px;
-  text-align: center;
+/* --- bootstrap uncertainty: tie badge --- */
+.boardpick__tie {
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid var(--gold);
   color: var(--gold);
-  font-weight: 800;
-  font-size: 14px;
-  padding-top: 10px;
-}
-.card__body {
-  flex: 1;
-  min-width: 0;
-}
-.card__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.card__name {
+  font-size: 9.5px;
   font-weight: 700;
-  font-size: 15px;
-}
-.card__ev {
-  font-weight: 800;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-}
-.card__win-unit {
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.6;
-  margin-left: 1px;
-}
-.recos__subnote {
-  margin: -4px 0 10px;
-  padding: 0 4px;
-  font-size: 11.5px;
-  opacity: 0.55;
+  white-space: nowrap;
+  cursor: help;
 }
 .pos {
   color: var(--pos);
 }
 .neg {
   color: var(--neg);
-}
-
-.contribs {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.contrib {
-  display: grid;
-  grid-template-columns: 12px 1fr auto auto;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 12.5px;
-}
-.contrib__sign {
-  font-weight: 800;
-}
-.contrib__text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.contrib__metric {
-  color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.contrib__val {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  text-align: right;
-}
-.contrib--pos .contrib__sign,
-.contrib--pos .contrib__val {
-  color: var(--pos);
-}
-.contrib--neg .contrib__sign,
-.contrib--neg .contrib__val {
-  color: var(--neg);
-}
-.contrib--muted .contrib__text {
-  color: var(--muted);
-  font-style: italic;
-  grid-column: 1 / -1;
-}
-.contrib--blind {
-  border-top: 1px dashed var(--border);
-  margin-top: 4px;
-  padding-top: 5px;
-}
-.contrib--blind .contrib__text {
-  color: var(--gold);
 }
 
 /* ---------------- buttons ---------------- */
@@ -907,35 +775,7 @@ input[type='range'] {
   color: var(--gold);
 }
 
-/* ---------------- left column (draft grid + all-roles board) ---------------- */
-.leftcol {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-/* ---------------- right column + team analysis ---------------- */
-.rightcol {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-/* Best picks + From your pool side by side (wraps to stacked when narrow). */
-.recos-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-}
-.recos-row > * {
-  flex: 1 1 360px;
-  min-width: 0;
-  max-width: 560px;
-}
-
+/* ---------------- team analysis ---------------- */
 .analysis {
   background: linear-gradient(180deg, var(--panel), var(--bg-2));
   border: 1px solid var(--border);
@@ -1246,28 +1086,6 @@ input[type='range'] {
   font-size: 11px;
   color: var(--muted);
 }
-.pickorder__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.pickorder__row {
-  display: grid;
-  grid-template-columns: 16px 56px 22px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  background: var(--panel-2);
-  border: 1px solid transparent;
-}
-.pickorder__row.is-top {
-  background: linear-gradient(90deg, rgba(255, 157, 60, 0.16), var(--panel-2));
-  border-color: rgba(255, 157, 60, 0.4);
-}
 .pickorder__rank {
   color: var(--muted);
   font-size: 11px;
@@ -1278,9 +1096,6 @@ input[type='range'] {
   font-weight: 800;
   letter-spacing: 0.5px;
   color: var(--muted);
-}
-.pickorder__row.is-top .pickorder__role {
-  color: var(--text);
 }
 .pickorder__champ {
   white-space: nowrap;
@@ -1310,12 +1125,6 @@ input[type='range'] {
 }
 
 /* ---------------- coachless deep-link ---------------- */
-.card__head {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
 .coachless-link {
   font-size: 11px;
   font-weight: 700;
@@ -1396,20 +1205,6 @@ input[type='range'] {
   color: var(--accent);
   font-weight: 800;
 }
-.recos__picker {
-  color: var(--ally);
-  font-weight: 700;
-}
-.recos__autonote {
-  margin: -4px 0 10px;
-  font-size: 11.5px;
-  color: var(--gold);
-  background: rgba(200, 170, 110, 0.08);
-  border: 1px solid rgba(200, 170, 110, 0.25);
-  border-radius: 7px;
-  padding: 4px 8px;
-}
-
 /* ---------------- all-roles board ---------------- */
 .board {
   background: linear-gradient(180deg, var(--panel), var(--bg-2));
@@ -1428,7 +1223,9 @@ input[type='range'] {
 }
 .board__cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  /* auto-fit so role columns wrap (3+2, then 2+2+1) instead of crushing rows —
+     five-across only when the stage is genuinely wide enough for readable rows */
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
   gap: 10px;
   align-items: start;
 }

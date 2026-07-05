@@ -15,6 +15,7 @@ export async function getBoard(state: DraftState, auto = false): Promise<BoardRe
         enemyTeam: state.enemyTeam,
         bans: state.bans,
         weights: state.weights,
+        dataset: state.dataset,
         auto,
         limit: 15,
       }),

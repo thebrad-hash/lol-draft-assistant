@@ -30,6 +30,18 @@ export function championIconUrl(id: string, version: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${key}.png`;
 }
 
+// Splash / loading art are NOT version-pinned (they live under /cdn/img/, not
+// /cdn/{version}/img/). Loading art is portrait-cropped — ideal for the champ-
+// select portrait frame; splash is the wide cinematic, good for hero backdrops.
+export function championLoadingUrl(id: string): string {
+  const key = DDRAGON_ID[id] ?? id;
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${key}_0.jpg`;
+}
+export function championSplashUrl(id: string): string {
+  const key = DDRAGON_ID[id] ?? id;
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${key}_0.jpg`;
+}
+
 function hashHue(str: string): number {
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;

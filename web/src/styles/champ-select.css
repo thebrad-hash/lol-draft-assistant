@@ -1,0 +1,1155 @@
+/* =============================================================================
+   CHAMP-SELECT THEME SKIN
+   Loads after index.css and re-skins the app's structural classes into Riot's
+   hextech champ-select look: gold filigree frames, Cinzel display headings,
+   angular panels, hextech-teal glow, three-region team rails. All values come
+   from tokens.css — this file is composition, not new constants.
+============================================================================= */
+
+/* ----------------------------- global chrome ----------------------------- */
+::selection { background: rgba(10, 200, 185, 0.28); color: var(--gold-100); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--gold-600) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--gold-600), var(--gold-500));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--gold-500), var(--gold-400)); background-clip: padding-box; }
+
+:focus-visible { outline: 1px solid var(--blue-200); outline-offset: 2px; }
+
+h1, h2, h3 { font-family: var(--font-display); }
+
+/* Decorative vignette + faint inner frame, like the client edge. Sits BEHIND all
+   content (z-index:-1) so it never disturbs the fixed drawer/modal layering. */
+.app { position: relative; }
+.app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.06), inset 0 0 180px rgba(0, 0, 0, 0.6);
+}
+/* Generated arcane-rift plate (10KB webp), one layer behind the vignette —
+   kept faint so text contrast never depends on it. */
+.app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background: url('/art/stage-rift.webp') center / cover no-repeat;
+  opacity: 0.55;
+}
+
+/* -------------------------------- topbar --------------------------------- */
+.topbar {
+  background:
+    linear-gradient(180deg, rgba(12, 28, 46, 0.96), rgba(1, 10, 19, 0.98));
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--gold-500) 18%, var(--gold-300) 50%, var(--gold-500) 82%, transparent) 1;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  padding: 12px 22px;
+}
+.brand__mark {
+  color: var(--blue-200);
+  filter: drop-shadow(0 0 9px rgba(10, 200, 185, 0.6));
+}
+.brand__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  background: linear-gradient(180deg, var(--gold-100), var(--gold-300) 70%, var(--gold-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand__sub {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--grey-300);
+}
+
+/* -------------------------------- buttons -------------------------------- */
+.btn {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  font-size: var(--fs-xs);
+  color: var(--void-900);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400) 60%, var(--gold-500));
+  border: 1px solid var(--gold-300);
+  border-radius: 0;
+  padding: 8px 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.4), 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: filter var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast);
+}
+.btn:hover { filter: brightness(1.12); box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.5), var(--glow-gold); }
+.btn:active { transform: translateY(1px); filter: brightness(0.96); }
+
+.btn--ghost {
+  color: var(--gold-200);
+  background: linear-gradient(180deg, rgba(10, 25, 41, 0.6), rgba(1, 10, 19, 0.6));
+  border: 1px solid var(--gold-500);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  text-shadow: none;
+}
+.btn--ghost:hover {
+  color: var(--blue-100);
+  border-color: var(--blue-300);
+  box-shadow: inset 0 0 12px rgba(5, 150, 170, 0.18), var(--glow-teal);
+  filter: none;
+}
+.iconbtn { color: var(--grey-300); }
+.iconbtn:hover { color: var(--gold-200); }
+
+/* --------------------------------- bans ---------------------------------- */
+/* Two five-slot wings converging on a center gem. Deliberately symmetric —
+   bans carry no team attribution in the draft model (see BansBar.tsx). */
+.bans {
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: linear-gradient(180deg, rgba(1, 10, 19, 0.7), rgba(9, 20, 40, 0.5));
+  border-bottom: 1px solid var(--c-line-soft);
+}
+.bans__wing { display: flex; gap: 7px; }
+.bans__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+}
+.bans__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-widest);
+  color: var(--gold-300);
+  text-transform: uppercase;
+}
+.bans__gem {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: var(--gold-300);
+  box-shadow: 0 0 6px rgba(200, 170, 110, 0.6);
+}
+.banslot {
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: linear-gradient(180deg, var(--void-700), var(--void-900));
+  color: var(--grey-400);
+  width: 42px; height: 42px;
+}
+/* outer-bottom corners notched so the wings read as converging on the gem */
+.bans__wing--l .banslot { clip-path: polygon(0 0, 100% 0, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+.bans__wing--r .banslot { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%); }
+.banslot--empty:hover { border-color: var(--gold-300); color: var(--gold-300); box-shadow: var(--glow-gold); }
+.banslot--filled { border-color: var(--gold-500); animation: banFill var(--dur-med) var(--ease-out); }
+.banslot--filled::after {
+  background: var(--c-loss);
+  height: 2px;
+  box-shadow: 0 0 6px var(--c-loss-glow);
+  animation: banStrike 260ms var(--ease-out) 110ms backwards;
+}
+.banslot__x { background: var(--c-loss); color: #1a0805; border-radius: 0; }
+/* lock-in: the slot flashes as the portrait lands, then the strike draws */
+@keyframes banFill {
+  from { transform: scale(1.14); filter: brightness(1.7); }
+  to { transform: none; filter: none; }
+}
+@keyframes banStrike {
+  from { transform: rotate(-20deg) scaleX(0); }
+  to { transform: rotate(-20deg) scaleX(1); }
+}
+
+/* ====================== three-region champ-select stage =================== */
+.champ-select {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr) 290px;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  align-items: start;
+  flex: 1;
+}
+@media (max-width: 1180px) {
+  .champ-select { grid-template-columns: 1fr; }
+  .rail { position: static !important; }
+  /* one region at a time, driven by the StageTabs tablist */
+  .champ-select[data-tab='board'] .rail { display: none; }
+  .champ-select[data-tab='ally'] .stage,
+  .champ-select[data-tab='ally'] .rail--enemy { display: none; }
+  .champ-select[data-tab='enemy'] .stage,
+  .champ-select[data-tab='enemy'] .rail--ally { display: none; }
+}
+
+/* ---------------------- narrow-stage tabs (≤1180px) ----------------------- */
+.stagetabs {
+  display: none; /* desktop shows all three regions side by side */
+  gap: 6px;
+  padding: 10px 18px 0;
+}
+.stagetabs__tab {
+  flex: 1;
+  padding: 8px 10px;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--grey-300);
+  background: rgba(9, 20, 40, 0.6);
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, 0 100%);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.stagetabs__tab:hover { color: var(--gold-100); border-color: var(--gold-400); }
+.stagetabs__tab.is-active {
+  color: var(--void-900);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400));
+  border-color: var(--gold-300);
+  box-shadow: var(--glow-gold);
+}
+/* after the base display:none so the narrow-screen override actually wins */
+@media (max-width: 1180px) {
+  .stagetabs { display: flex; }
+}
+.rail {
+  position: sticky;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+/* -------------------------- team rails (DraftGrid) ------------------------ */
+.team {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(16, 34, 51, 0.5), rgba(1, 10, 19, 0.82)),
+    var(--c-surface);
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  padding: var(--sp-3);
+}
+.team::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 3px;
+}
+.team--ally { border-left: 1px solid var(--gold-600); }
+.team--ally::after { left: 0; background: linear-gradient(180deg, transparent, var(--c-ally), transparent); box-shadow: 0 0 14px rgba(44, 212, 230, 0.5); }
+.team--enemy::after { right: 0; background: linear-gradient(180deg, transparent, var(--c-enemy), transparent); box-shadow: 0 0 14px rgba(210, 75, 75, 0.5); }
+
+.team__head { padding: 2px 2px 12px; }
+.team__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+.team--ally .team__title { color: var(--c-ally); }
+.team--enemy .team__title { color: var(--c-enemy); }
+
+/* role selector → hextech segmented control */
+.roleselect__label { font-family: var(--font-cond); color: var(--grey-300); letter-spacing: var(--tracking-wide); }
+.roleselect__btn {
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: rgba(1, 10, 19, 0.6);
+  color: var(--grey-300);
+  font-family: var(--font-cond);
+  font-weight: 700;
+  height: 24px;
+}
+.roleselect__btn:hover { color: var(--gold-100); border-color: var(--gold-400); }
+.roleselect__btn.is-active {
+  color: var(--void-900);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400));
+  border-color: var(--gold-300);
+  box-shadow: var(--glow-gold);
+}
+
+/* pick rows → player slabs */
+.pick {
+  position: relative;
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: linear-gradient(90deg, rgba(1, 10, 19, 0.85), rgba(9, 20, 40, 0.5));
+  min-height: 54px;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.team--ally .pick { border-left: 3px solid var(--c-ally-dim); }
+.team--enemy .pick { border-left: 3px solid var(--c-enemy-dim); }
+
+/* lock-in slam: fills remount (keyed by role+champ) so this plays per lock */
+.pick--filled { animation: lockSlam var(--dur-lock) var(--ease-slam); }
+@keyframes lockSlam {
+  0% { transform: scale(1.05); box-shadow: 0 0 0 1px var(--gold-300), 0 0 26px rgba(200, 170, 110, 0.45); }
+  60% { transform: scale(0.995); }
+  100% { transform: none; box-shadow: none; }
+}
+
+/* shimmering empty frame */
+.pick--empty {
+  overflow: hidden;
+  border-style: dashed;
+  border-color: var(--gold-600);
+  color: var(--grey-400);
+}
+.pick--empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 42%, rgba(200, 170, 110, 0.09) 50%, transparent 58%);
+  transform: translateX(-100%);
+  animation: pickShimmer 3.6s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+@keyframes pickShimmer { to { transform: translateX(100%); } }
+.pick--empty:hover { border-color: var(--gold-300); color: var(--gold-200); box-shadow: var(--glow-gold); }
+.pick__add { font-family: var(--font-cond); letter-spacing: var(--tracking-wide); text-transform: uppercase; font-size: var(--fs-xs); }
+
+/* open-role summary on the first empty slab — a hint, not a promise */
+.pick__ghosts { display: inline-flex; gap: 4px; margin-left: auto; cursor: help; }
+.pick__ghost {
+  font-family: var(--font-cond);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--grey-400);
+  opacity: 0.6;
+  border: 1px solid rgba(91, 90, 86, 0.4);
+  padding: 1px 4px;
+}
+
+/* identity column: champ name over the premade owner + pool-depth pips */
+.pick__id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick__id .pick__name { flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick__name { font-weight: 600; color: var(--gold-100); }
+.pick__member { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pick__member-name {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--blue-200);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pick__member-name.is-me { color: var(--gold-200); }
+.pick__pips { display: inline-flex; gap: 2px; flex: none; cursor: help; }
+.pick__pip { width: 5px; height: 8px; background: rgba(91, 90, 86, 0.45); }
+.pick__pip.is-on { background: var(--blue-200); box-shadow: 0 0 4px rgba(10, 200, 185, 0.5); }
+
+/* live-sync indicator in the rail header */
+.team__live {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--c-win);
+  box-shadow: 0 0 8px var(--c-win-glow);
+  animation: pulse 1.4s ease-in-out infinite;
+  vertical-align: 1px;
+}
+.pick__clear { border-radius: 0; border-color: var(--gold-600); color: var(--grey-300); }
+.pick__clear:hover { color: var(--c-loss); border-color: var(--c-loss); }
+.rolechip {
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: rgba(200, 170, 110, 0.08);
+  color: var(--gold-300);
+  font-family: var(--font-cond);
+  font-weight: 700;
+}
+
+/* avatar → gold-framed portrait */
+.avatar {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.35);
+  border: 1px solid var(--gold-600);
+}
+
+/* ----------------------------- shared panels ----------------------------- */
+.board, .analysis, .pickorder, .recos, .lobby {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(16, 34, 51, 0.45), rgba(1, 10, 19, 0.85)),
+    var(--c-surface);
+  border: 1px solid transparent;
+  border-image: var(--frame-gold) 1;
+  border-radius: 0;
+  box-shadow: var(--shadow-panel);
+}
+/* corner ticks for the framed panels */
+.board::before, .analysis::before, .pickorder::before, .recos::before, .lobby::before,
+.board::after, .analysis::after, .pickorder::after, .recos::after, .lobby::after {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  border: 1px solid var(--gold-300);
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 2;
+}
+.board::before, .analysis::before, .pickorder::before, .recos::before, .lobby::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.board::after, .analysis::after, .pickorder::after, .recos::after, .lobby::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+/* panel headings → Cinzel with a hextech underline */
+.board__head h2, .analysis__head h2, .pickorder__head h2, .recos__head h2, .lobby__head h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-100);
+}
+.recos__role { color: var(--blue-200); font-family: var(--font-display); }
+.board__hint, .pickorder__hint { font-family: var(--font-cond); letter-spacing: var(--tracking-wide); text-transform: uppercase; font-size: var(--fs-2xs); color: var(--grey-400); }
+.recos__spinner { border-top-color: var(--blue-200); border-color: var(--gold-600); border-top-color: var(--blue-200); }
+
+/* ----------------------------- all-roles board --------------------------- */
+/* Columns come from index.css: auto-fit minmax(185px) — readable rows first,
+   five-across only when the stage is wide enough. */
+.board__cols { gap: 8px; }
+.board__col {
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: linear-gradient(180deg, rgba(9, 20, 40, 0.6), rgba(1, 10, 19, 0.7));
+  padding: 9px 10px;
+}
+.board__col.is-active {
+  border-color: var(--gold-400);
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.25), 0 0 18px rgba(5, 150, 170, 0.2);
+}
+.board__role {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wider);
+  color: var(--gold-300);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--c-line-soft);
+  padding-bottom: 6px;
+}
+.board__col.is-active .board__role { color: var(--gold-100); }
+.board__locked { color: var(--c-win); font-family: var(--font-cond); }
+.boardpick { border-radius: 0; background: rgba(9, 20, 40, 0.5); border: 1px solid transparent; }
+/* two-line slab: avatar left; name line above, rank·tie·win%·Δ line below —
+   names and the tie badge never fight for the same pixels in a narrow column */
+.boardpick__row { gap: 7px; padding: 4px 6px; }
+.boardpick__row:hover { background: rgba(5, 150, 170, 0.1); }
+.boardpick.is-open { box-shadow: inset 0 0 0 1px var(--gold-500); background: rgba(9, 20, 40, 0.8); }
+.boardpick__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.boardpick__line { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.boardpick__rank {
+  width: auto;
+  min-width: 10px;
+  color: var(--gold-500);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 9px;
+}
+.boardpick__name { color: var(--gold-100); font-weight: 500; font-size: 12.5px; }
+.boardpick__ev {
+  margin-left: auto;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+.boardpick__ev.pos { color: var(--c-win); }
+.boardpick__ev.neg { color: var(--c-loss); }
+/* relative "vs field" delta chip — sign-colored, sits after the absolute win% */
+.boardpick__delta {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 3px;
+  border-radius: 3px;
+  cursor: help;
+}
+.boardpick__delta.pos { color: var(--c-win); background: color-mix(in srgb, var(--c-win) 14%, transparent); }
+.boardpick__delta.neg { color: var(--c-loss); background: color-mix(in srgb, var(--c-loss) 14%, transparent); }
+
+/* --- per-member pool sub-lists inside each role column (premade lobby) ---
+   The pool block is "what your squad can actually play" — it reads as a raised
+   teal-edged slab so the global list below is clearly the reference shelf. */
+.board__pool {
+  margin: 2px -4px 0;
+  padding: 6px 4px 7px;
+  border: 1px solid rgba(5, 150, 170, 0.35);
+  border-left: 2px solid var(--c-ally-dim);
+  background: linear-gradient(90deg, rgba(5, 150, 170, 0.08), rgba(9, 20, 40, 0.25));
+}
+.board__pool + .board__pool { margin-top: 6px; }
+.board__pool-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
+.board__pool-name {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-cond); font-weight: 700; font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--blue-200);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.board__pool-name.is-me { color: var(--gold-200); }
+.board__pool-you {
+  font-size: 8px; letter-spacing: 0.06em; color: var(--void-900);
+  background: var(--gold-300); padding: 0 4px; line-height: 13px;
+}
+.board__pool-tag {
+  flex: none; font-family: var(--font-cond); font-size: 8.5px;
+  letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--grey-400);
+}
+/* tint the pool rows hextech-teal so they read apart from the global list */
+.board__picks--pool .boardpick { background: rgba(5, 150, 170, 0.07); }
+.board__picks--pool .boardpick__row:hover { background: rgba(5, 150, 170, 0.16); }
+
+/* divider between premade pools (above) and the global reference list below */
+.board__global-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 0 5px;
+  font-family: var(--font-cond);
+  font-size: 8.5px;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--grey-400);
+  white-space: nowrap;
+}
+.board__global-label::before,
+.board__global-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-600), transparent);
+}
+
+/* per-column "show all N / top 5" unfold for the global list */
+.board__more {
+  width: 100%;
+  margin-top: 4px;
+  padding: 3px 6px;
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--grey-300);
+  background: rgba(1, 10, 19, 0.4);
+  border: 1px dashed var(--gold-600);
+  border-radius: 0;
+  cursor: pointer;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.board__more:hover,
+.board__more:focus-visible { color: var(--gold-200); border-color: var(--gold-400); }
+
+/* expanded-detail internals: the shared bar + notes + build link */
+.bpd__ci { display: flex; flex-direction: column; gap: 3px; padding: 2px 2px 4px; }
+.bpd__tie-note {
+  font-size: var(--fs-2xs);
+  line-height: 1.4;
+  color: var(--gold-200);
+}
+.boardpick__detail .coachless-link { align-self: flex-start; margin-top: 3px; }
+
+/* focus = "prioritize against / with this champ": header note + per-pick badge */
+.board__focus-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-200);
+}
+.board__focus-clear {
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--grey-300);
+  background: none;
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  padding: 1px 7px;
+  cursor: pointer;
+}
+.board__focus-clear:hover { color: var(--c-loss); border-color: var(--c-loss); }
+.boardpick__focus {
+  flex: none;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.boardpick__focus.pos { color: var(--blue-200); }
+.boardpick__focus.neg { color: var(--c-loss); opacity: 0.8; }
+
+.pickorder__who { color: var(--grey-300); font-weight: 400; }
+
+/* focusable picked-champ button in the team rails */
+.pick__focus {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pick__focus:hover .pick__name { color: var(--blue-100); }
+.pick__focus-mark {
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  color: var(--void-900);
+  background: linear-gradient(135deg, var(--gold-200), var(--gold-400));
+  box-shadow: 0 0 8px rgba(200, 170, 110, 0.55);
+  z-index: 2;
+}
+.pick--focused {
+  border-color: var(--gold-300) !important;
+  box-shadow: inset 0 0 0 1px var(--gold-400), var(--glow-gold);
+}
+.pick--focused .pick__name { color: var(--gold-100); }
+
+/* ------------------------- pick-order turn ribbon ------------------------ */
+/* A slim horizontal turn-tracker: open roles left→right in pick-priority
+   order. The #1 stop wears the gold "pick next" tag. */
+.pickorder { padding: 10px 14px 12px; }
+.pickorder__track {
+  list-style: none;
+  margin: 0;
+  padding: 9px 2px 4px; /* top padding leaves room for the hanging badge */
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.pickorder__stop {
+  position: relative;
+  flex: 1 0 164px;
+  min-width: 164px;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  background: rgba(9, 20, 40, 0.5);
+  border: 1px solid var(--gold-600);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, 0 100%);
+}
+.pickorder__stop.is-top {
+  background: linear-gradient(90deg, rgba(200, 170, 110, 0.16), rgba(9, 20, 40, 0.4));
+  border-color: var(--gold-400);
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.15);
+}
+.pickorder__rank {
+  flex: none;
+  width: 15px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  text-align: center;
+  color: var(--gold-500);
+}
+.pickorder__stop.is-top .pickorder__rank { color: var(--gold-300); }
+.pickorder__info { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.pickorder__role {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--gold-300);
+  text-transform: uppercase;
+}
+.pickorder__stop.is-top .pickorder__role { color: var(--gold-100); }
+.pickorder__champ {
+  font-size: var(--fs-sm);
+  color: var(--gold-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pickorder__ev {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+.pickorder__ev.pos { color: var(--c-win); }
+.pickorder__ev.neg { color: var(--c-loss); }
+.pickorder__steep { font-size: 10px; color: var(--gold-400); cursor: help; }
+.pickorder__badge {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  padding: 1px 7px;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--void-900);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400));
+  border-radius: 0;
+  box-shadow: var(--glow-gold);
+}
+
+/* ------------------------------- analysis -------------------------------- */
+.analysis__headline {
+  background: rgba(9, 20, 40, 0.6);
+  border: 1px solid var(--c-line-soft);
+  border-left: 3px solid var(--gold-400);
+  border-radius: 0;
+  color: var(--gold-100);
+}
+.verdict__team.you b { color: var(--c-ally); text-shadow: 0 0 14px rgba(44, 212, 230, 0.35); }
+.verdict__team.enemy b { color: var(--c-enemy); text-shadow: 0 0 14px rgba(210, 75, 75, 0.35); }
+.verdict__team b { font-family: var(--font-display); font-size: var(--fs-xl); }
+.verdict__bar {
+  position: relative;
+  height: 14px;
+  border-radius: 0;
+  border-color: var(--gold-600);
+  background: var(--void-900);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+}
+/* the 50/50 tick — even draft reference, mirroring the confidence bar's */
+.verdict__bar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(240, 230, 210, 0.35);
+}
+.verdict__fill.you { background: linear-gradient(90deg, var(--blue-500), var(--c-ally)); }
+.verdict__fill.enemy { background: linear-gradient(90deg, var(--c-enemy), #8c2f2f); }
+.lane { border-radius: 0; background: rgba(9, 20, 40, 0.5); border: 1px solid var(--c-line-soft); }
+.lane__role { font-family: var(--font-cond); color: var(--gold-300); letter-spacing: var(--tracking-wide); }
+.lane__dpp { font-family: var(--font-num); }
+.lane__dpp.pos { color: var(--c-win); }
+.lane__dpp.neg { color: var(--c-loss); }
+.lane--nodata { opacity: 0.72; }
+.lane--nodata .lane__dpp {
+  font-family: var(--font-cond);
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-400);
+  cursor: help;
+}
+.caveat::before { color: var(--gold-300); }
+
+/* --------------------------------- lobby --------------------------------- */
+.lobby { margin: var(--sp-4) var(--sp-5) 0; }
+
+/* empty state: summoning circle + invite CTA */
+.lobby--empty {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 12px 16px;
+}
+.lobby__circle {
+  flex: none;
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid var(--gold-600);
+  box-shadow: 0 0 22px rgba(10, 200, 185, 0.2), inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+.lobby__invite { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lobby__invite-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-100);
+}
+.lobby__invite-copy {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--c-ink-soft);
+  max-width: 560px;
+}
+.lobby__invite-cta { flex: none; }
+@media (max-width: 600px) {
+  .lobby--empty { flex-wrap: wrap; }
+  .lobby__invite-cta { width: 100%; }
+}
+
+/* collapsed strip: title + count + a one-line summary */
+.lobby__fold {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  color: var(--gold-300);
+  background: none;
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast);
+}
+.lobby__fold:hover,
+.lobby__fold:focus-visible { border-color: var(--gold-300); color: var(--gold-100); box-shadow: var(--glow-gold); }
+.lobby--collapsed .lobby__head { margin-bottom: 0; }
+.lobby__summary {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-200);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.lobby__count { border-radius: 0; border-color: var(--gold-600); background: rgba(1, 10, 19, 0.6); color: var(--gold-200); font-family: var(--font-num); }
+.lobby__me { border-radius: 0; border-color: var(--gold-600); background: rgba(9, 20, 40, 0.5); }
+.lobby__name { border-radius: 0; border-color: var(--gold-600); background: var(--void-900); color: var(--gold-100); }
+.lobby__name:focus { border-color: var(--blue-300); outline: none; }
+.member { border-radius: 0; border-color: var(--gold-600); background: rgba(9, 20, 40, 0.5); }
+.member--you { border-color: var(--c-ally); box-shadow: inset 0 0 0 1px rgba(44, 212, 230, 0.3); }
+.member__name { color: var(--gold-100); font-weight: 600; }
+.rolechip.is-on {
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400));
+  color: var(--void-900);
+  border-color: var(--gold-300);
+}
+.lobbybar__share.is-stale { color: var(--c-loss); }
+
+/* premade lobby: roster on the left, team chat on the right */
+.lobby__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+@media (max-width: 920px) {
+  .lobby__grid { grid-template-columns: 1fr; }
+}
+.lobby__main { min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  max-height: 300px;
+  border: 1px solid var(--gold-600);
+  background: linear-gradient(180deg, rgba(9, 20, 40, 0.6), rgba(1, 10, 19, 0.7));
+}
+.chat__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gold-300);
+  border-bottom: 1px solid var(--c-line-soft);
+  background: rgba(1, 10, 19, 0.5);
+}
+.chat__close {
+  display: none; /* slide-over affordance — phones only */
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-ink-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chat__close:hover,
+.chat__close:focus-visible { color: var(--gold-100); }
+
+/* floating chat toggle — phones only */
+.chat-fab {
+  display: none;
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: var(--z-drawer);
+  padding: 9px 14px;
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--void-900);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400) 60%, var(--gold-500));
+  border: 1px solid var(--gold-300);
+  border-radius: 0;
+  box-shadow: var(--shadow-deep), var(--glow-gold);
+  cursor: pointer;
+}
+
+/* phones: the chat becomes a bottom slide-over */
+@media (max-width: 920px) {
+  .chat-fab { display: inline-flex; }
+  .chat__close { display: block; }
+  .chat {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-height: min(420px, 70vh);
+    z-index: var(--z-drawer);
+    background: linear-gradient(180deg, rgba(9, 20, 40, 0.97), rgba(1, 10, 19, 0.98));
+    border: 1px solid transparent;
+    border-image: var(--frame-gold) 1;
+    box-shadow: var(--shadow-deep);
+    transform: translateY(calc(100% + 24px));
+    /* the visibility flip waits for the slide to finish (canonical pattern) */
+    transition: transform var(--dur-med) var(--ease-out), visibility 0s var(--dur-med);
+    visibility: hidden; /* hidden from the a11y tree while off-screen */
+  }
+  .chat.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--dur-med) var(--ease-out), visibility 0s;
+  }
+}
+.chat__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.chat__empty {
+  margin: auto;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--grey-400);
+  font-style: italic;
+  padding: 0 12px;
+}
+.chatmsg {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 92%;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-left: 2px solid var(--blue-500);
+  background: rgba(5, 150, 170, 0.06);
+}
+.chatmsg.is-me {
+  align-self: flex-end;
+  border-left: 0;
+  border-right: 2px solid var(--gold-400);
+  background: rgba(200, 170, 110, 0.08);
+  text-align: right;
+}
+.chatmsg__name {
+  font-family: var(--font-cond);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--blue-200);
+}
+.chatmsg.is-me .chatmsg__name { color: var(--gold-300); }
+.chatmsg__text {
+  font-size: var(--fs-sm);
+  color: var(--gold-100);
+  line-height: 1.35;
+  word-break: break-word;
+}
+.chat__form { flex: none; display: flex; gap: 5px; padding: 7px; border-top: 1px solid var(--c-line-soft); }
+.chat__input {
+  flex: 1;
+  min-width: 0;
+  background: var(--void-900);
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  color: var(--gold-100);
+  padding: 6px 9px;
+  font: inherit;
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.chat__input:focus { border-color: var(--blue-300); box-shadow: inset 0 0 8px rgba(5, 150, 170, 0.15); }
+.chat__send { flex: none; padding: 6px 12px; }
+.chat__send:disabled { opacity: 0.45; cursor: default; filter: none; box-shadow: none; }
+
+/* ------------------------------- recos panel ----------------------------- */
+.recos__list { gap: var(--sp-2); }
+
+/* ------------------------------ picker modal ----------------------------- */
+.modal { background: rgba(1, 6, 12, 0.78); backdrop-filter: blur(3px) saturate(1.1); }
+.picker {
+  border-radius: 0;
+  background: linear-gradient(180deg, var(--void-800), var(--void-900));
+  border: 1px solid transparent;
+  border-image: var(--frame-gold) 1;
+  box-shadow: var(--shadow-deep), 0 0 40px rgba(5, 150, 170, 0.1);
+}
+.picker__title { font-family: var(--font-display); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--gold-100); font-size: var(--fs-lg); }
+.picker__role { border-radius: 0; border-color: var(--gold-500); color: var(--blue-200); font-family: var(--font-cond); text-transform: uppercase; }
+.picker__head { border-bottom: 1px solid var(--gold-600); }
+.picker__search { border-radius: 0; border-color: var(--gold-600); background: var(--void-900); color: var(--gold-100); }
+.picker__search:focus { border-color: var(--blue-300); box-shadow: inset 0 0 10px rgba(5, 150, 170, 0.15); }
+.champcell {
+  border-radius: 0;
+  border: 1px solid var(--gold-600);
+  background: rgba(9, 20, 40, 0.5);
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast);
+}
+.champcell:hover:not(:disabled) { border-color: var(--gold-300); box-shadow: var(--glow-gold); transform: translateY(-1px); }
+.champcell--sel { border-color: var(--blue-300); box-shadow: inset 0 0 0 1px rgba(10, 200, 185, 0.3); }
+.champcell__name { color: var(--gold-100); }
+.champcell__tag { color: var(--blue-200); font-family: var(--font-cond); }
+
+/* -------------------------------- drawer --------------------------------- */
+.scrim { background: rgba(1, 6, 12, 0.6); backdrop-filter: blur(2px); }
+.drawer {
+  background: linear-gradient(180deg, var(--void-800), var(--void-900));
+  border-left: 1px solid transparent;
+  border-image: linear-gradient(180deg, var(--gold-300), var(--gold-600)) 1;
+  box-shadow: var(--shadow-deep);
+}
+.drawer__head { border-bottom: 1px solid var(--gold-600); background: var(--void-800); }
+.drawer__head h2 { font-family: var(--font-display); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--gold-100); }
+.drawer__section { border-bottom: 1px solid var(--c-line-soft); }
+.drawer__section h3 { font-family: var(--font-display); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--gold-300); }
+input[type='range'] { accent-color: var(--gold-300); }
+.wslider__val, .wslider__applied { color: var(--gold-300); font-family: var(--font-num); }
+.autotoggle { border-radius: 0; border-color: var(--gold-600); background: rgba(9, 20, 40, 0.5); }
+.autotoggle input { accent-color: var(--blue-200); }
+.weightnotes { border-radius: 0; border-color: var(--gold-500); background: rgba(200, 170, 110, 0.07); }
+.pool__input { border-radius: 0; border-color: var(--gold-600); background: var(--void-900); color: var(--gold-100); }
+.pool__input:focus { border-color: var(--blue-300); }
+.chip { border-radius: 0; }
+.chip--ok { color: var(--c-win); border-color: rgba(10, 203, 143, 0.4); }
+.chip--bad { color: var(--c-loss); border-color: rgba(210, 85, 63, 0.4); }
+.pool__active { color: var(--gold-300); }
+
+/* ----------------------------- coachless link ---------------------------- */
+.coachless-link { border-radius: 0; color: var(--gold-300); border-color: var(--gold-600); font-family: var(--font-cond); text-transform: uppercase; letter-spacing: 0.04em; }
+.coachless-link:hover { background: rgba(200, 170, 110, 0.12); border-color: var(--gold-300); }
+
+/* ------------------------------- live dot -------------------------------- */
+.live-dot.is-on { background: var(--c-win); box-shadow: 0 0 8px var(--c-win-glow); }
+.live-dot.is-wait { background: var(--gold-300); box-shadow: 0 0 7px rgba(200, 170, 110, 0.6); }
+.live-dot.is-err { background: var(--c-loss); }
+
+/* -------------------------------- footer --------------------------------- */
+.site-footer {
+  margin-top: auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  border-top: 1px solid var(--c-line-soft);
+  background: linear-gradient(180deg, transparent, rgba(1, 10, 19, 0.6));
+}
+.site-footer__rule { width: min(420px, 80%); }
+.site-footer__legal {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--grey-400);
+  max-width: 640px;
+  line-height: 1.5;
+}
+.site-footer__legal strong { color: var(--gold-300); font-weight: 600; }
+
+/* ==========================================================================
+   MOBILE (phones ≤ 600px)
+   The board is a 5-column role grid; the ≤720px rule drops it to 2 columns,
+   but a pick row (rank · avatar · name · ≈tied · WPA↗ · win% · Δ chip) can't
+   fit in a ~165px half-width column — so the win% and Δ chips overflowed and
+   clipped off the right edge. Collapse to ONE full-width role column, wrap the
+   sticky header instead of letting its actions run off-screen, and reclaim the
+   side gutters for content.
+   ========================================================================== */
+@media (max-width: 600px) {
+  /* sticky header: brand on top, the action cluster wraps onto its own row */
+  .topbar { flex-wrap: wrap; row-gap: 8px; padding: 10px 12px; }
+  .brand { min-width: 0; gap: 9px; }
+  .brand__sub { display: none; } /* keep the pinned header short on phones */
+  .topbar__actions { width: 100%; flex-wrap: wrap; gap: 6px; }
+  .dataset-toggle, .dataset-toggle__select { min-width: 0; } /* never overflow */
+
+  /* stage: trade the wide desktop gutters for content width */
+  .champ-select { padding: var(--sp-3); gap: var(--sp-3); }
+
+  /* bans: center strip on top, the two wings wrap beneath it */
+  .bans { flex-wrap: wrap; row-gap: 6px; padding: 8px 10px; }
+  .bans__center { flex-basis: 100%; order: -1; flex-direction: row; justify-content: center; gap: 8px; }
+
+  /* the fix: one role per full-width row so every row fits without clipping */
+  .board { padding: 12px; }
+  .board__cols { grid-template-columns: 1fr; gap: 8px; }
+  .board__col { padding: 9px 11px; }
+
+  /* roomier, tap-friendly rows now that a row owns the full width */
+  .boardpick__row { padding: 6px 7px; gap: 8px; }
+  .boardpick__name { font-size: 12.5px; }
+
+  /* safety net: a stray wide child can't force a horizontal page scroll.
+     `clip` (not `hidden`) so the sticky header keeps working. */
+  .app { overflow-x: clip; }
+}

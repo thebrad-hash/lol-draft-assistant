@@ -1,0 +1,106 @@
+/* =============================================================================
+   CONFIDENCE BAR — the uncertainty signature (ConfidenceBar.tsx)
+   One reusable hextech bar for every win-probability estimate: the bootstrap
+   interval as a gold-capped range on a fixed 35–65% display window, a diamond
+   median marker, and a 50% coin-flip reference tick. Tones: win (teal) /
+   loss (crimson) / tied (gold) / low-data (hatched grey). Ends that overflow
+   the window render as outward chevrons — a clamped bar never understates the
+   uncertainty. All constants from tokens.css.
+============================================================================= */
+
+.cbar {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+}
+
+.cbar__track {
+  position: relative;
+  height: 6px;
+  background: linear-gradient(90deg, rgba(60, 60, 65, 0.35), rgba(30, 35, 40, 0.55));
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.cbar--sm .cbar__track { height: 4px; }
+
+/* 50% reference tick — which side of a coin flip the interval sits on */
+.cbar__mid {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(240, 230, 210, 0.3);
+}
+
+/* the interval range */
+.cbar__range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--blue-500), var(--c-conf-high));
+  opacity: 0.9;
+}
+.cbar--loss .cbar__range { background: linear-gradient(90deg, #6e2a22, var(--c-loss)); }
+.cbar--tied .cbar__range { background: linear-gradient(90deg, var(--gold-600), var(--c-conf-tied)); }
+.cbar--lowdata .cbar__range { background: var(--hatch-lowdata); opacity: 0.75; }
+
+/* gold caps bounding the interval */
+.cbar__cap {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--gold-300);
+  box-shadow: 0 0 4px rgba(200, 170, 110, 0.55);
+}
+
+/* interval wider than the display window → outward chevron instead of a cap */
+.cbar__clip {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.cbar__clip--lo { left: 0; border-right: 5px solid var(--gold-300); }
+.cbar__clip--hi { right: 0; border-left: 5px solid var(--gold-300); }
+
+/* median marker — hextech diamond */
+.cbar__node {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  transform: translateY(-50%) rotate(45deg);
+  background: var(--gold-100);
+  box-shadow: 0 0 0 1px var(--void-900), var(--glow-conf-high);
+}
+.cbar--sm .cbar__node { width: 6px; height: 6px; margin-left: -3px; }
+.cbar--loss .cbar__node { box-shadow: 0 0 0 1px var(--void-900), 0 0 6px rgba(240, 230, 210, 0.5); }
+.cbar--tied .cbar__node { box-shadow: 0 0 0 1px var(--void-900), var(--glow-conf-tied); }
+.cbar--lowdata .cbar__node { background: var(--gold-200); box-shadow: 0 0 0 1px var(--void-900); }
+
+/* 35 · 50 · 65 axis labels (expanded / large contexts) */
+.cbar__axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-cond);
+  font-size: 8.5px;
+  letter-spacing: var(--tracking-wide);
+  color: var(--c-ink-faint);
+}
+
+/* readout row */
+.cbar__text {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.02em;
+  color: var(--c-ink-muted);
+  white-space: nowrap;
+}
+.cbar__sd { opacity: 0.7; }
+.cbar__flag { color: var(--c-conf-tied); }

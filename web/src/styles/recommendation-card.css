@@ -1,0 +1,326 @@
+/* =============================================================================
+   RECOMMENDATION CARD — champ-select portrait slab
+   A pick rendered like a champ-select team-rail entry: framed portrait, the
+   win probability as the hero stat, the shared ConfidenceBar (styles in
+   confidence-bar.css), and the z-score advantage/disadvantage breakdown
+   revealed on expand. The rank-1 card is THE recommended pick: an enlarged
+   hero slab with the cinematic splash bleed and a breathing gold aura.
+   Uses tokens.css.
+============================================================================= */
+
+.pc {
+  --frame: var(--gold-600);
+  --frame-lit: var(--gold-300);
+  list-style: none;
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--frame);
+  background:
+    linear-gradient(90deg, rgba(1, 10, 19, 0.94) 38%, rgba(9, 20, 40, 0.72) 100%),
+    var(--c-surface);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  transition: border-color var(--dur-med) var(--ease-out),
+              box-shadow var(--dur-med) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+
+/* Splash bleed — the champion's loading art drifts in from the right, kept
+   faint and masked so the data stays legible. Brightens on hover/open. */
+.pc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--splash);
+  background-size: cover;
+  background-position: center 22%;
+  opacity: 0.16;
+  filter: saturate(1.1);
+  -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+  transition: opacity var(--dur-slow) var(--ease-out);
+  pointer-events: none;
+}
+.pc:hover::before,
+.pc.is-open::before { opacity: 0.3; }
+
+.pc:hover {
+  border-color: var(--frame-lit);
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.15), var(--glow-gold);
+}
+
+/* The top recommendation — THE pick — is an enlarged hero slab: hextech-teal
+   left rail, brighter frame, cinematic splash bleed, breathing gold aura. */
+.pc--top {
+  --frame: var(--gold-500);
+  --frame-lit: var(--gold-200);
+  border-color: var(--gold-400);
+  background:
+    linear-gradient(90deg, rgba(1, 10, 19, 0.96) 30%, rgba(1, 10, 19, 0.6) 62%, rgba(9, 20, 40, 0.28) 100%),
+    var(--c-surface);
+}
+.pc--top::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--blue-200), transparent);
+  box-shadow: var(--glow-teal);
+}
+/* splash bleed reads stronger on the hero (scrim above keeps the data legible) */
+.pc--top::before {
+  opacity: 0.3;
+  background-position: center 26%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 12%, #000 72%);
+  mask-image: linear-gradient(90deg, transparent 12%, #000 72%);
+}
+.pc--top:hover::before,
+.pc--top.is-open::before { opacity: 0.44; }
+
+@keyframes auraPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.16), 0 0 0 rgba(200, 170, 110, 0); }
+  50% { box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.3), 0 0 22px rgba(200, 170, 110, 0.26); }
+}
+
+.pc--top .pc__head { padding: var(--sp-3) var(--sp-4); gap: var(--sp-4); }
+.pc--top .pc__portrait { width: 64px; height: 80px; }
+.pc--top .pc__name { font-size: var(--fs-lg); }
+.pc--top .pc__pct { font-size: var(--fs-4xl); letter-spacing: -0.01em; }
+.pc--top .pc__score { min-width: 168px; gap: 5px; }
+
+/* A tied pick is "uncertain" — dashed, dimmed gold frame. */
+.pc--tied { border-style: dashed; border-color: var(--gold-500); opacity: 0.94; }
+
+/* -------------------------------- head row -------------------------------- */
+.pc__head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: none;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.pc__head:focus-visible {
+  outline: 1px solid var(--blue-200);
+  outline-offset: -2px;
+}
+
+/* portrait — gold-framed, notched-corner loading art */
+.pc__portrait {
+  position: relative;
+  width: 46px;
+  height: 56px;
+  flex: none;
+  border: 1px solid var(--gold-500);
+  background: var(--void-900);
+  overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+}
+.pc__art {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  filter: saturate(0.92) contrast(1.02);
+  transition: transform var(--dur-slow) var(--ease-out), filter var(--dur-med) var(--ease-out);
+}
+.pc:hover .pc__art { transform: scale(1.07); filter: saturate(1.05) contrast(1.05); }
+
+.pc__rank {
+  position: absolute;
+  left: 0; top: 0;
+  min-width: 16px;
+  padding: 0 3px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  line-height: 16px;
+  text-align: center;
+  color: var(--gold-100);
+  background: linear-gradient(135deg, rgba(1, 10, 19, 0.95), rgba(70, 55, 20, 0.9));
+  border-right: 1px solid var(--gold-500);
+  border-bottom: 1px solid var(--gold-500);
+}
+.pc--top .pc__rank { color: var(--void-900); background: linear-gradient(135deg, var(--gold-300), var(--gold-400)); }
+
+/* identity block */
+.pc__id { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pc__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-md);
+  letter-spacing: 0.02em;
+  color: var(--gold-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pc__sub { display: flex; align-items: center; gap: var(--sp-2); min-height: 14px; }
+.pc__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--c-ink-faint);
+}
+.pc__adv { color: var(--c-win); }
+.pc__dis { color: var(--c-loss); }
+.pc__sep { color: var(--c-ink-faint); letter-spacing: var(--tracking-wider); }
+
+.pc__tie {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-300);
+  border: 1px solid var(--gold-500);
+  padding: 1px 6px;
+  cursor: help;
+  animation: tiePulse 2.6s var(--ease-in-out) infinite;
+}
+@keyframes tiePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 170, 110, 0); }
+  50% { box-shadow: 0 0 8px 0 rgba(200, 170, 110, 0.35); }
+}
+
+/* score block — the hero stat */
+.pc__score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 88px;
+}
+.pc__pct {
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  line-height: 0.9;
+  color: var(--gold-100);
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.6);
+}
+.pc--fav .pc__pct { color: #d6f7ea; text-shadow: 0 0 18px var(--c-win-glow); }
+.pc--unfav .pc__pct { color: #f3cfc6; text-shadow: 0 0 18px var(--c-loss-glow); }
+.pc--tied .pc__pct { color: var(--gold-200); text-shadow: none; }
+.pc__unit { font-size: 0.5em; font-weight: 600; margin-left: 1px; opacity: 0.7; vertical-align: 0.4em; }
+
+/* the score block hosts the shared ConfidenceBar; keep its readout right-ragged */
+.pc__score .cbar__text { align-self: flex-end; }
+
+.pc__chevron {
+  color: var(--gold-500);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform var(--dur-med) var(--ease-out), color var(--dur-fast);
+}
+.pc__chevron.is-open { transform: rotate(180deg); color: var(--gold-300); }
+.pc:hover .pc__chevron { color: var(--gold-300); }
+
+/* ------------------------------ expand reveal ----------------------------- */
+.pc__detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-med) var(--ease-out);
+}
+.pc.is-open .pc__detail { grid-template-rows: 1fr; }
+.pc__detail-inner {
+  overflow: hidden;
+  min-height: 0;
+  /* hidden (incl. from the accessibility tree) while collapsed — the 0fr grid
+     trick alone leaves the clipped content exposed to screen readers */
+  visibility: hidden;
+  transition: visibility var(--dur-med);
+}
+.pc.is-open .pc__detail-inner {
+  visibility: visible;
+  border-top: 1px solid var(--c-line-soft);
+  /* glass scrim: expanded data stays legible over the brightened splash bleed */
+  background: linear-gradient(180deg, rgba(1, 10, 19, 0.45), rgba(1, 10, 19, 0.72));
+}
+.pc__detail .hex-rule { padding: var(--sp-2) var(--sp-3) 0; }
+.pc__empty {
+  margin: 0;
+  padding: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--c-ink-faint);
+  font-style: italic;
+}
+
+/* expanded uncertainty section — the celebrated version of the bar */
+.pc__uncert {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-2) var(--sp-3) 0;
+}
+.pc__tie-note,
+.pc__lowdata-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--gold-200);
+}
+.pc__lowdata-note { color: var(--c-ink-muted); }
+
+.pc__factors { list-style: none; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-3); display: flex; flex-direction: column; gap: 1px; }
+.pc__factor {
+  display: grid;
+  grid-template-columns: 14px 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 4px 6px;
+  font-size: var(--fs-sm);
+  border-left: 2px solid transparent;
+  transition: background var(--dur-fast);
+}
+.pc__factor:hover { background: rgba(10, 25, 41, 0.6); }
+.pc__factor.is-pos { border-left-color: rgba(10, 203, 143, 0.5); }
+.pc__factor.is-neg { border-left-color: rgba(210, 85, 63, 0.5); }
+.pc__factor-mark { font-size: var(--fs-2xs); text-align: center; }
+.pc__factor.is-pos .pc__factor-mark { color: var(--c-win); }
+.pc__factor.is-neg .pc__factor-mark { color: var(--c-loss); }
+.pc__factor-text { color: var(--c-ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc__factor-metric {
+  font-family: var(--font-cond);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--c-ink-faint);
+}
+.pc__factor-val { font-weight: 600; color: var(--gold-200); min-width: 42px; text-align: right; }
+.pc__factor.is-pos .pc__factor-val { color: var(--c-win); }
+.pc__factor.is-neg .pc__factor-val { color: var(--c-loss); }
+
+/* staggered entrance for the list of cards */
+.pc { animation: pcRise var(--dur-med) var(--ease-out) both; }
+@keyframes pcRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* after the base entrance rule so the hero keeps BOTH entrance + aura */
+.pc--top {
+  animation:
+    pcRise var(--dur-med) var(--ease-out) both,
+    auraPulse 3.4s var(--ease-in-out) 0.6s infinite;
+}
+
+/* the tie pill: full wording on desktop, compact "≈ tied" on phones */
+.pc__tie { white-space: nowrap; }
+.pc__tie-short { display: none; }
+
+/* phones: the hero slab shrinks a step so the numeral never crowds the row */
+@media (max-width: 600px) {
+  .pc--top .pc__head { padding: var(--sp-2) var(--sp-3); gap: var(--sp-3); }
+  .pc--top .pc__portrait { width: 52px; height: 66px; }
+  .pc--top .pc__pct { font-size: var(--fs-3xl); }
+  .pc--top .pc__score { min-width: 128px; }
+  .pc__tie-long { display: none; }
+  .pc__tie-short { display: inline; }
+}

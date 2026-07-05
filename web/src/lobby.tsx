@@ -8,12 +8,38 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { createLobby, getLobby, leaveLobby, upsertMember } from './lobbyApi';
-import type { LobbyMember, Role } from './types';
+import { createLobby, getLobby, leaveLobby, publishLive, sendChat, upsertMember } from './lobbyApi';
+import { ROLES } from './types';
+import type { ChatMessage, LiveDraft, LiveSource, LobbyMember, Role } from './types';
 
 function lobbyIdFromUrl(): string | null {
   if (typeof window === 'undefined') return null;
   return new URLSearchParams(window.location.search).get('lobby');
+}
+
+// --- per-role champion pools, persisted locally so they survive new lobby links.
+// One pool per role ({TOP:[...], JUNGLE:[...], ...}); selecting a role loads its
+// saved pool, editing the pool saves it back. Per browser/device (like ld_name).
+const ROLE_KEY = 'ld_role';
+const POOLS_KEY = 'ld_pools';
+
+function loadPoolsMap(): Partial<Record<Role, string[]>> {
+  try {
+    const p = JSON.parse(localStorage.getItem(POOLS_KEY) || '{}');
+    if (!p || typeof p !== 'object') return {};
+    const out: Partial<Record<Role, string[]>> = {};
+    for (const r of ROLES) {
+      if (Array.isArray(p[r])) out[r] = p[r].filter((x: unknown): x is string => typeof x === 'string');
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function loadSavedRole(): Role | null {
+  const r = localStorage.getItem(ROLE_KEY);
+  return r && (ROLES as string[]).includes(r) ? (r as Role) : null;
 }
 
 function stableMemberId(): string {
@@ -38,6 +64,9 @@ interface LobbyValue {
   lobbyId: string | null;
   connected: boolean; // lobby exists on the server
   members: LobbyMember[];
+  messages: ChatMessage[];
+  liveDraft: LiveDraft | null; // broadcast draft (null when none/stale)
+  liveSource: LiveSource | null; // who's broadcasting it (null when none)
   me: { memberId: string; name: string; role: Role | null; pool: string[] };
   shareUrl: string | null;
   create: () => Promise<void>;
@@ -45,6 +74,8 @@ interface LobbyValue {
   setName: (name: string) => void;
   setRole: (role: Role | null) => void;
   togglePool: (championId: string) => void;
+  sendMessage: (text: string) => Promise<void>;
+  broadcastLive: (draft: LiveDraft | null) => Promise<void>; // host -> lobby
 }
 
 const LobbyContext = createContext<LobbyValue | null>(null);
@@ -54,9 +85,17 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
   const [lobbyId, setLobbyId] = useState<string | null>(() => lobbyIdFromUrl());
   const [connected, setConnected] = useState(false);
   const [members, setMembers] = useState<LobbyMember[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [liveDraft, setLiveDraft] = useState<LiveDraft | null>(null);
+  const [liveSource, setLiveSource] = useState<LiveSource | null>(null);
   const [name, setNameState] = useState(() => localStorage.getItem('ld_name') || 'Player');
-  const [role, setRole] = useState<Role | null>(null);
-  const [pool, setPool] = useState<string[]>([]);
+  // the saved per-role pool library; the active `pool` mirrors poolsRef[role]
+  const poolsRef = useRef<Partial<Record<Role, string[]>>>(loadPoolsMap());
+  const [role, setRoleState] = useState<Role | null>(() => loadSavedRole());
+  const [pool, setPool] = useState<string[]>(() => {
+    const r = loadSavedRole();
+    return r ? poolsRef.current[r] ?? [] : [];
+  });
   const seeded = useRef(false); // have we reconciled local state with the server yet?
 
   const setName = useCallback((n: string) => {
@@ -64,9 +103,38 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('ld_name', n);
   }, []);
 
-  const togglePool = useCallback((championId: string) => {
-    setPool((p) => (p.includes(championId) ? p.filter((x) => x !== championId) : [...p, championId]));
+  // persist a role's pool into the local library
+  const rememberPool = useCallback((r: Role | null, next: string[]) => {
+    if (!r) return;
+    poolsRef.current = { ...poolsRef.current, [r]: next };
+    try {
+      localStorage.setItem(POOLS_KEY, JSON.stringify(poolsRef.current));
+    } catch {
+      /* storage blocked — pools just won't persist this session */
+    }
   }, []);
+
+  // selecting a role loads that role's saved pool (deselecting leaves it as-is)
+  const setRole = useCallback((r: Role | null) => {
+    setRoleState(r);
+    try {
+      localStorage.setItem(ROLE_KEY, r ?? '');
+    } catch {
+      /* ignore */
+    }
+    if (r) setPool(poolsRef.current[r] ?? []);
+  }, []);
+
+  const togglePool = useCallback(
+    (championId: string) => {
+      setPool((p) => {
+        const next = p.includes(championId) ? p.filter((x) => x !== championId) : [...p, championId];
+        rememberPool(role, next); // save to the library under the current role
+        return next;
+      });
+    },
+    [role, rememberPool],
+  );
 
   const create = useCallback(async () => {
     const res = await createLobby();
@@ -83,13 +151,46 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
     setLobbyId(null);
     setConnected(false);
     setMembers([]);
+    setMessages([]);
+    setLiveDraft(null);
+    setLiveSource(null);
   }, [lobbyId, memberId]);
+
+  // Push (or clear) our live champ-select draft to the lobby, tagged with who we
+  // are. Updates our own copy immediately so we don't wait a poll cycle.
+  const broadcastLive = useCallback(
+    async (draft: LiveDraft | null) => {
+      if (!lobbyId) return;
+      const lob = await publishLive(lobbyId, draft, { memberId, name });
+      if (lob) {
+        setLiveDraft(lob.liveDraft ?? null);
+        setLiveSource(lob.liveSource ?? null);
+      }
+    },
+    [lobbyId, memberId, name],
+  );
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const t = text.trim();
+      if (!lobbyId || !t) return;
+      const lob = await sendChat(lobbyId, { memberId, name, text: t });
+      if (lob) {
+        setMembers(lob.members);
+        setMessages(lob.messages ?? []); // sender sees their own message immediately
+      }
+    },
+    [lobbyId, memberId, name],
+  );
 
   // join + poll the lobby
   useEffect(() => {
     if (!lobbyId) {
       setConnected(false);
       setMembers([]);
+      setMessages([]);
+      setLiveDraft(null);
+      setLiveSource(null);
       return;
     }
     let cancelled = false;
@@ -99,13 +200,23 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       setConnected(!!lob);
       if (!lob) return;
       setMembers(lob.members);
+      setMessages(lob.messages ?? []);
+      setLiveDraft(lob.liveDraft ?? null);
+      setLiveSource(lob.liveSource ?? null);
       if (first) {
         const mine = lob.members.find((m) => m.memberId === memberId);
         if (mine && !seeded.current) {
-          // rejoining an existing lobby — adopt our prior name/role/pool
+          // rejoining an existing lobby — adopt our prior name/role/pool and
+          // fold that pool back into the local library (raw role set, no reload)
           setNameState(mine.name);
-          setRole(mine.role);
+          setRoleState(mine.role);
+          try {
+            localStorage.setItem(ROLE_KEY, mine.role ?? '');
+          } catch {
+            /* ignore */
+          }
           setPool(mine.pool);
+          rememberPool(mine.role, mine.pool);
         } else if (!mine) {
           await upsertMember(lobbyId, { memberId, name, role, pool });
         }
@@ -142,6 +253,9 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       lobbyId,
       connected,
       members,
+      messages,
+      liveDraft,
+      liveSource,
       me: { memberId, name, role, pool },
       shareUrl,
       create,
@@ -149,8 +263,10 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       setName,
       setRole,
       togglePool,
+      sendMessage,
+      broadcastLive,
     }),
-    [lobbyId, connected, members, memberId, name, role, pool, shareUrl, create, leave, setName, togglePool],
+    [lobbyId, connected, members, messages, liveDraft, liveSource, memberId, name, role, pool, shareUrl, create, leave, setName, togglePool, sendMessage, broadcastLive],
   );
 
   return <LobbyContext.Provider value={value}>{children}</LobbyContext.Provider>;

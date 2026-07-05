@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CHAMPIONS, CHAMPIONS_BY_ID } from '../mock/champions';
 import { useDraft } from '../store';
 import type { Weights } from '../types';
+import { Tooltip } from './Onboarding';
 
 const SLIDERS: { key: keyof Weights; label: string; hint: string }[] = [
   { key: 'inLane', label: 'In-lane', hint: 'matchup vs your direct opponent' },
@@ -63,7 +64,19 @@ export function WeightsDrawer({ open, onClose }: { open: boolean; onClose: () =>
               onChange={(e) => setAutoWeights(e.target.checked)}
             />
             <span className="autotoggle__text">
-              <span className="autotoggle__title">Auto-adapt to draft</span>
+              <span className="autotoggle__title">
+                Auto-adapt to draft
+                <Tooltip
+                  focusable
+                  label="These weights drive the additive-z fallback ranking only — when the calibrated win-probability model is loaded, the model owns the ranking and the sliders don't change it."
+                >
+                  {/* preventDefault: the "?" sits inside the toggle's <label>; a click
+                      should open nothing and must not flip the checkbox */}
+                  <span className="hintmark" onClick={(e) => e.preventDefault()}>
+                    ?
+                  </span>
+                </Tooltip>
+              </span>
               <span className="autotoggle__hint">
                 rescales these weights to the pick's context — is your lane opponent known, how
                 many allies are locked, where you are in the pick order

@@ -17,6 +17,7 @@ export async function getPickOrder(state: DraftState, auto = false): Promise<Pic
         enemyTeam: state.enemyTeam,
         bans: state.bans,
         weights: state.weights,
+        dataset: state.dataset,
         auto,
       }),
     });

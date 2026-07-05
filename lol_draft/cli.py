@@ -128,6 +128,46 @@ FEAT_LABEL = {"lane_z": "Lane", "counter_z": "Counter", "synergy_z": "Syn",
               "champ_strength": "Str"}
 
 
+def _print_uncertainty(un_results, ensemble, args):
+    """Bootstrap error-bar table: median + 90%% interval + sd per candidate, with
+    picks statistically tied with the top pick marked 'too close to call'."""
+    m = ensemble.meta
+    thr = args.tie_threshold
+    from .winprob import TIE_THRESHOLD_DEFAULT
+    if thr is None:
+        thr = TIE_THRESHOLD_DEFAULT
+    sources = ("coefficient noise only" if args.ci_coef_only
+               else "coefficient noise + champ win-rate sampling error")
+    print(f"\nscoring: bootstrap win probability  "
+          f"[{m.get('n_iter','?')} resamples of {m.get('n_matches','?')} games, "
+          f"seed {m.get('seed','?')}, tie threshold {thr:.2f}]")
+    print(f"  uncertainty: {sources}")
+    lo_p = int(un_results[0].lo_pct) if un_results else 5
+    hi_p = int(un_results[0].hi_pct) if un_results else 95
+    print()
+    print(f"{'#':>2}  {'Champion':<14} {'Median':>7}  {f'{lo_p}-{hi_p}% interval':>15}  "
+          f"{'sd':>5}   verdict vs top pick")
+    n_tied = 0
+    for i, r in enumerate(un_results[: args.top], 1):
+        interval = f"[{r.p_lo*100:4.1f}, {r.p_hi*100:4.1f}]"
+        star = "" if r.complete else " *"
+        if r.prob_top_better is None:        # the top pick itself
+            verdict = "— top pick"
+        elif r.tied_with_top:
+            n_tied += 1
+            verdict = f"TIED — too close to call (top wins {r.prob_top_better*100:.0f}% of resamples)"
+        else:
+            verdict = f"top better ({r.prob_top_better*100:.0f}% of resamples)"
+        print(f"{i:>2}  {r.champion:<14} {r.median*100:>6.1f}%  {interval:>15}  "
+              f"{r.std*100:>4.1f}%   {verdict}{star}")
+    if n_tied:
+        print(f"\n  {n_tied} pick(s) statistically tied with the top pick — the median ordering "
+              f"is within bootstrap noise. Pick on comfort / matchup feel.")
+    else:
+        print(f"\n  No picks tied with the top at threshold {thr:.2f}: the top median edge is "
+              f"robust across resamples.")
+
+
 def _print_additive(results, weights, args, agg, *, header):
     """The legacy additive-z table (fallback when no model, or --baseline)."""
     if header:
@@ -187,8 +227,22 @@ def cmd_recommend(args):
         results, warnings = score_draft(store, state, rank=rank, weights=weights,
                                         agg=args.agg, top_n=args.top_n)
         wp_results: list = []
+        un_results: list = []
+        ensemble = None
         if model is not None:
             wp_results, warnings = rank_candidates(store, state, model, rank=rank)
+            if args.ci:
+                from .model import WinProbEnsemble, default_ensemble_path
+                from .winprob import rank_candidates_uncertain, TIE_THRESHOLD_DEFAULT
+                try:
+                    ensemble = WinProbEnsemble.load(default_ensemble_path())
+                except (FileNotFoundError, ValueError):
+                    ensemble = None
+                if ensemble is not None:
+                    thr = args.tie_threshold if args.tie_threshold is not None else TIE_THRESHOLD_DEFAULT
+                    un_results, _ = rank_candidates_uncertain(
+                        store, state, ensemble, rank=rank, point_model=model, tie_threshold=thr,
+                        propagate_feature_uncertainty=not args.ci_coef_only)
 
     # header
     agg = args.agg or settings.get("agg", config.DEFAULT_AGG)
@@ -224,6 +278,13 @@ def cmd_recommend(args):
               f"{'' if r.complete else '  *'}")
     if any(not r.complete for r in wp_results[: args.top]):
         print("  * some pairings lack data (off-role / new champ); mean-over-known used")
+
+    if args.ci:
+        if ensemble is None:
+            print("\n  ! --ci: no bootstrap ensemble found. Build it with: "
+                  "python -m lol_draft.bootstrap")
+        else:
+            _print_uncertainty(un_results, ensemble, args)
 
     if args.explain:
         print("\n--- breakdown (per-feature push on the win logit) ---")
@@ -300,6 +361,17 @@ def build_parser() -> argparse.ArgumentParser:
                     help="override a weight for this run (repeatable / comma-separated)")
     pr.add_argument("--top", type=int, default=10, help="how many candidates to show (default 10)")
     pr.add_argument("--explain", action="store_true", help="show per-component contribution breakdown")
+    pr.add_argument("--ci", "--uncertainty", action="store_true", dest="ci",
+                    help="show bootstrap error bars (median + 90%% interval + sd) and mark "
+                         "picks statistically tied with the top pick (needs the ensemble: "
+                         "python -m lol_draft.bootstrap)")
+    pr.add_argument("--tie-threshold", type=float, default=None, dest="tie_threshold",
+                    help="distinguishability bar for --ci (default 0.85): a pick must beat the "
+                         "top pick's negation, i.e. the top must win >= this fraction of resamples, "
+                         "to be called distinguishable; below it the pick is 'too close to call'")
+    pr.add_argument("--ci-coef-only", action="store_true", dest="ci_coef_only",
+                    help="with --ci, show coefficient uncertainty ONLY (omit champ_strength's "
+                         "win-rate sampling error). Narrower, less honest intervals — for comparison")
     pr.add_argument("--additive", action="store_true",
                     help="use the legacy additive-z scoring instead of the calibrated win-prob model")
     pr.add_argument("--baseline", action="store_true",

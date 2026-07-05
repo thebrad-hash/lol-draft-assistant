@@ -17,10 +17,13 @@ web/node_modules/
 # and labels are tied to a key/region — keep out of git)
 data/games/
 
-# Trained model artifacts: commit the DEPLOYED model (Vercel needs it), ignore
+# Trained model artifacts: commit the DEPLOYED model + its bootstrap ensemble
+# (Vercel needs both — the ensemble drives the win-prob error bars / tie flags;
+# without it the serve path silently falls back to point estimates), ignore
 # experimental variants (e.g. winprob_allpatches.json).
 data/models/*
 !data/models/winprob.json
+!data/models/winprob_bootstrap.json
 
 # PyInstaller desktop build (large binary; distribute via a Release, not git)
 /build/
@@ -32,3 +35,4 @@ Thumbs.db
 .DS_Store
 
 # Keep: data/raw/* (source data) and web/src/mock/champions.ts (generated, committed)
+.vercel

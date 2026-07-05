@@ -1,0 +1,282 @@
+/* =============================================================================
+   ONBOARDING — Tooltip + Coachmark primitives and the lobby guide panel.
+   Hextech-skinned strictly from tokens.css (no new colors/fonts). Floating
+   layers sit at z-index 60: above the picker overlay (50) and drawer (45).
+============================================================================= */
+
+/* --------------------------------- tooltip ------------------------------- */
+.tip__wrap { display: inline-flex; }
+.tip__wrap:focus-visible { outline: 1px solid var(--blue-300); outline-offset: 2px; }
+
+.tip {
+  position: fixed;
+  z-index: 60;
+  max-width: 280px;
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--c-ink-soft);
+  background: linear-gradient(180deg, rgba(16, 34, 51, 0.97), rgba(1, 10, 19, 0.97));
+  border: var(--frame-w) solid transparent;
+  border-image: var(--frame-gold) 1;
+  box-shadow: var(--shadow-deep);
+  pointer-events: none; /* never steals the cursor from the trigger */
+  animation: tip-in var(--dur-fast) var(--ease-out);
+}
+@keyframes tip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Shared caret: a rotated square poking out of the bubble's frame. */
+.tip__caret,
+.coach__caret {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--void-800);
+  border: 1px solid var(--gold-500);
+  pointer-events: none;
+}
+/* bubble above the anchor -> caret points down from the bottom edge */
+.tip--top .tip__caret,
+.coach--top .coach__caret {
+  bottom: -5px;
+  border-top: 0;
+  border-left: 0;
+}
+/* bubble below the anchor -> caret points up from the top edge */
+.tip--bottom .tip__caret,
+.coach--bottom .coach__caret {
+  top: -5px;
+  border-bottom: 0;
+  border-right: 0;
+}
+
+/* -------------------------------- coachmark ------------------------------ */
+.coach {
+  position: fixed;
+  z-index: 60;
+  width: min(280px, calc(100vw - 16px));
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, rgba(16, 34, 51, 0.97), rgba(1, 10, 19, 0.97));
+  border: var(--frame-w) solid transparent;
+  border-image: var(--frame-gold) 1;
+  box-shadow: var(--shadow-deep), var(--glow-gold);
+  animation: coach-in var(--dur-med) var(--ease-out);
+}
+@keyframes coach-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.coach__title {
+  margin: 0 18px 6px 0; /* keep clear of the × */
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gold-300);
+}
+.coach__body {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--c-ink-soft);
+}
+.coach__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: 10px;
+}
+.coach__btn {
+  padding: 4px 10px;
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-200);
+  background: linear-gradient(180deg, var(--void-700), var(--void-900));
+  border: 1px solid var(--gold-500);
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+.coach__btn:hover,
+.coach__btn:focus-visible {
+  border-color: var(--gold-300);
+  color: var(--gold-100);
+  box-shadow: var(--glow-gold);
+}
+.coach__btn--ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--c-ink-muted);
+}
+.coach__btn--ghost:hover,
+.coach__btn--ghost:focus-visible {
+  border-color: var(--gold-600);
+  color: var(--gold-200);
+  box-shadow: none;
+}
+.coach__x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-ink-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.coach__x:hover,
+.coach__x:focus-visible { color: var(--gold-100); }
+
+/* --------------------- "How to use this" guide panel --------------------- */
+.guide {
+  border: 1px solid var(--gold-600);
+  background: linear-gradient(180deg, rgba(9, 20, 40, 0.5), rgba(1, 10, 19, 0.6));
+}
+.guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: rgba(1, 10, 19, 0.5);
+  cursor: pointer;
+}
+.guide__title {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gold-300);
+}
+.guide__chev {
+  color: var(--gold-500);
+  font-size: var(--fs-xs);
+}
+.guide__head:hover .guide__title,
+.guide__head:focus-visible .guide__title { color: var(--gold-100); }
+
+.guide__body { padding: 10px 12px 12px; }
+.guide__lede,
+.guide__steps li,
+.guide__notes li,
+.guide__disclaimer {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--c-ink-soft);
+}
+.guide__lede { margin: 0 0 4px; }
+.guide__rule { margin: 10px 0 8px; }
+.guide__sub {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--gold-300);
+}
+.guide__steps {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+}
+.guide__steps li::marker {
+  color: var(--gold-400);
+  font-weight: 600;
+}
+.guide__notes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.1em;
+  list-style: none;
+}
+.guide__notes li { position: relative; }
+.guide__notes li::before {
+  content: '';
+  position: absolute;
+  left: -1.05em;
+  top: 0.5em;
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  background: var(--gold-400);
+}
+.guide__disclaimer {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--c-line-soft);
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--c-ink-muted);
+}
+
+/* tiny inline "?" that carries a Tooltip (e.g. Auto-adapt in the drawer) */
+.hintmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  vertical-align: -2px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gold-300);
+  border: 1px solid var(--gold-600);
+  cursor: help;
+}
+.tip__wrap:hover .hintmark,
+.tip__wrap:focus-visible .hintmark {
+  color: var(--gold-100);
+  border-color: var(--gold-300);
+}
+
+/* "?" affordance in the lobby header — re-opens all hints */
+.lobby__help {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  color: var(--gold-300);
+  background: none;
+  border: 1px solid var(--gold-600);
+  border-radius: 0;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast),
+    color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+.lobby__help:hover,
+.lobby__help:focus-visible {
+  border-color: var(--gold-300);
+  color: var(--gold-100);
+  box-shadow: var(--glow-gold);
+}

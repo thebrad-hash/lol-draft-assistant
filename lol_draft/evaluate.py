@@ -59,15 +59,24 @@ def evaluate_teams(store: Store, team_a: dict, team_b: dict, *,
     # --- lane matchups (same role, head to head): the laning phase ---
     lanes = []
     lane_edge = 0.0
+    lanes_with_data = 0
     for r in ROLES:
         a, b = team_a.get(r), team_b.get(r)
         if not (a and b):
             continue
         cell = store.cell("matchup", r, r, a, b)
         if cell is None:
+            # Both slots ARE locked, but the source data has no head-to-head datum
+            # for this pairing — typically an off-role pick machineloling doesn't
+            # cover in this role's block (e.g. a jungler played bot). Show the lane
+            # anyway (dropping a fully-locked lane reads as a missing role); mark it
+            # no-data and let it contribute 0 to the lane edge.
+            lanes.append({"role": r, "a": a, "b": b, "dpp": None,
+                          "favored": "even", "noData": True})
             continue
         dpp = cell[0]
         lane_edge += dpp
+        lanes_with_data += 1
         lanes.append({"role": r, "a": a, "b": b, "dpp": round(dpp, 3),
                       "favored": "A" if dpp > 0 else ("B" if dpp < 0 else "even")})
 
@@ -127,7 +136,7 @@ def evaluate_teams(store: Store, team_a: dict, team_b: dict, *,
     )
 
     return {
-        "complete": len(lanes) == 5 and na == 10 and nb == 10,
+        "complete": lanes_with_data == 5 and na == 10 and nb == 10,
         "score": {"a": score_a, "b": 100 - score_a},
         "winProbA": round(win_a, 3),
         "components": {
@@ -185,6 +194,8 @@ def _win_conditions(lane_edge, syn_diff, lanes, la, lb,
 
     # 2) lane-by-lane callouts
     for ln in lanes:
+        if ln["dpp"] is None:  # no-data lane (off-role pick) — nothing to call out
+            continue
         if abs(ln["dpp"]) >= LANE_NOTE:
             winner, loser = (ln["a"], ln["b"]) if ln["dpp"] > 0 else (ln["b"], ln["a"])
             team = la if ln["dpp"] > 0 else lb

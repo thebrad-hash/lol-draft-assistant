@@ -1,0 +1,225 @@
+/* =============================================================================
+   HEXTECH DESIGN TOKENS — lol-draft-assistant
+   The single source of truth for the "inside the League client" look: palette,
+   type, spacing, frames, motion. Components reference these vars; avoid inlining
+   raw hexes/sizes elsewhere.
+
+   Palette is Riot's own League brand system (gold + hextech blue + cool greys).
+   Fonts: Cinzel (a free Beaufort/Trajan-style Roman serif) for display, Barlow
+   (humanist sans, evokes the client's Spiegel) for body + data.
+   NOTE: fonts load from Google Fonts; offline (the PyInstaller desktop build)
+   they degrade to the serif/sans fallbacks below — acceptable, self-host later.
+============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap');
+
+:root {
+  /* ---- Hextech gold ------------------------------------------------------ */
+  --gold-100: #f0e6d2;   /* brightest "parchment" text / active             */
+  --gold-200: #cdbe91;   /* gold body text                                  */
+  --gold-300: #c8aa6e;   /* primary gold (borders, headings)                */
+  --gold-400: #c89b3c;   /* saturated gold (hover, emphasis)                */
+  --gold-500: #785a28;   /* deep gold (frame base)                          */
+  --gold-600: #463714;   /* dark gold (frame shadow side)                   */
+  --gold-700: #32281e;   /* darkest gold-brown                              */
+
+  /* ---- Hextech blue / teal (data + glow) -------------------------------- */
+  --blue-100: #cdfafa;   /* ice highlight                                   */
+  --blue-200: #0ac8b9;   /* bright hextech teal (primary accent)            */
+  --blue-300: #0596aa;   /* mid teal                                        */
+  --blue-400: #0397ab;   /* glow teal                                       */
+  --blue-500: #005a82;   /* deep blue                                       */
+  --blue-600: #0a323c;   /* abyssal teal (fills)                            */
+
+  /* ---- Cool voids / surfaces -------------------------------------------- */
+  --void-900: #010a13;   /* the deepest black-navy (app base)               */
+  --void-800: #091428;   /* panel base navy                                 */
+  --void-700: #0a1929;   /* raised navy                                     */
+  --void-600: #0f2233;   /* hover navy                                      */
+  --grey-700: #1e2328;   /* neutral chrome                                  */
+  --grey-600: #1e282d;
+  --grey-500: #3c3c41;
+  --grey-400: #5b5a56;   /* muted ink                                       */
+  --grey-300: #a09b8c;   /* secondary ink                                   */
+
+  /* ---- Semantic aliases (use these in components) ----------------------- */
+  --c-bg:            var(--void-900);
+  --c-surface:       var(--void-800);
+  --c-surface-2:     var(--void-700);
+  --c-surface-hover: var(--void-600);
+  --c-ink:           var(--gold-100);
+  --c-ink-soft:      var(--gold-200);
+  --c-ink-muted:     var(--grey-300);
+  --c-ink-faint:     var(--grey-400);
+  --c-line:          var(--gold-500);
+  --c-line-soft:     #1c2c3a;
+  --c-accent:        var(--gold-300);
+  --c-accent-hot:    var(--gold-400);
+  --c-data:          var(--blue-200);
+
+  /* Win / loss read as hextech teal-green vs the client's danger red */
+  --c-win:        #0acb8f;
+  --c-win-glow:   rgba(10, 203, 143, 0.5);
+  --c-loss:       #d2553f;   /* muted League danger red                      */
+  --c-loss-glow:  rgba(210, 85, 63, 0.45);
+  --c-ally:       #2cd4e6;   /* ally-rail blue                               */
+  --c-enemy:      #d24b4b;   /* enemy-rail red                               */
+
+  /* ---- Typography ------------------------------------------------------- */
+  --font-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+  --font-body: 'Barlow', system-ui, -apple-system, sans-serif;
+  --font-cond: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+  --font-num: 'Barlow', system-ui, sans-serif; /* tabular numerals via font-feature */
+
+  --fs-2xs: 0.625rem;   /* 10px overlines           */
+  --fs-xs:  0.6875rem;  /* 11px micro-labels        */
+  --fs-sm:  0.8125rem;  /* 13px secondary data      */
+  --fs-md:  0.9375rem;  /* 15px body                */
+  --fs-lg:  1.125rem;   /* 18px subhead             */
+  --fs-xl:  1.5rem;     /* 24px panel title         */
+  --fs-2xl: 2.25rem;    /* 36px hero stat           */
+  --fs-3xl: 3.25rem;    /* 52px stage display       */
+
+  --tracking-wide: 0.08em;
+  --tracking-wider: 0.16em;
+  --tracking-widest: 0.28em;
+
+  /* ---- Spacing (4px base) ----------------------------------------------- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-8: 3rem;
+
+  /* ---- Radius / borders ------------------------------------------------- */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --frame-w: 1px;
+
+  /* ---- Elevation + glow ------------------------------------------------- */
+  --shadow-panel: 0 2px 24px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  --shadow-deep: 0 8px 40px rgba(0, 0, 0, 0.7);
+  --glow-gold: 0 0 14px rgba(200, 170, 110, 0.35);
+  --glow-teal: 0 0 16px rgba(10, 200, 185, 0.4);
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-med: 240ms;
+  --dur-slow: 420ms;
+
+  /* Gradient recipe for the gold frame (reused via border-image) */
+  --frame-gold: linear-gradient(160deg, var(--gold-600) 0%, var(--gold-300) 42%, var(--gold-100) 50%, var(--gold-300) 58%, var(--gold-600) 100%);
+
+  /* ---- Confidence states (the uncertainty story — ConfidenceBar et al.) --- */
+  --c-conf-high: var(--blue-200);   /* confident interval fill                */
+  --c-conf-tied: var(--gold-300);   /* "too close to call — pick on comfort"  */
+  --c-conf-low:  var(--grey-400);   /* low-data / not-yet-trustworthy model   */
+  --glow-conf-high: 0 0 10px rgba(10, 200, 185, 0.45);
+  --glow-conf-tied: 0 0 10px rgba(200, 170, 110, 0.45);
+  --hatch-lowdata: repeating-linear-gradient(45deg, rgba(160, 155, 140, 0.55) 0 3px, rgba(160, 155, 140, 0.12) 3px 6px);
+
+  /* ---- Hero numeral tier (the one-pick-right-now number) ----------------- */
+  --fs-4xl: clamp(2.75rem, 6vw, 4.25rem);
+
+  /* ---- Stage layout ------------------------------------------------------ */
+  --rail-w: 290px;   /* ally/enemy rail width                                 */
+  --notch: 7px;      /* standard clipped-corner size (.hex-clip)              */
+  --c-ally-dim:  rgba(44, 212, 230, 0.6);
+  --c-enemy-dim: rgba(210, 75, 75, 0.6);
+
+  /* ---- Z scale (adopted per surface as each component is rebuilt) -------- */
+  --z-topbar: 30;
+  --z-scrim: 40;
+  --z-drawer: 45;
+  --z-modal: 50;
+  --z-float: 60;
+
+  /* ---- Motion: lock-in ---------------------------------------------------- */
+  --dur-lock: 560ms;
+  --ease-slam: cubic-bezier(0.2, 1.4, 0.3, 1);
+}
+
+/* =============================================================================
+   REUSABLE TREATMENTS
+============================================================================= */
+
+/* Tabular, fixed-width numerals for any stat that changes (win %, z-scores). */
+.hex-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+/* Display heading: Roman serif, spaced caps, faint gold gradient ink. */
+.hex-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--gold-100);
+}
+
+/* Small overline label (the "PICKING / BANS" micro-caps). */
+.hex-overline {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--gold-300);
+}
+
+/* The signature framed panel: dark fill + gold gradient hairline + corner ticks. */
+.hex-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(16, 34, 51, 0.55), rgba(1, 10, 19, 0.85)),
+    var(--c-surface);
+  border: var(--frame-w) solid transparent;
+  border-image: var(--frame-gold) 1;
+  box-shadow: var(--shadow-panel);
+}
+/* Corner ticks — little gold L-brackets at the four corners. */
+.hex-panel::before,
+.hex-panel::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--gold-300);
+  pointer-events: none;
+  opacity: 0.85;
+}
+.hex-panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.hex-panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+/* Standard clipped corner (bottom-right notch) — the champ-select angular cut. */
+.hex-clip {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, 0 100%);
+}
+
+/* Horizontal rule with a centered hextech diamond — the champ-select divider. */
+.hex-rule {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--gold-500);
+}
+.hex-rule::before,
+.hex-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-500), transparent);
+}
+.hex-rule__gem {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: var(--gold-300);
+  box-shadow: 0 0 6px rgba(200, 170, 110, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

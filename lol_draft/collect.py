@@ -210,6 +210,7 @@ class ExtractStats:
     rows: int = 0
     unmapped_champs: Counter = field(default_factory=Counter)
     incomplete_roles: int = 0
+    off_patch: int = 0          # fetched but not on the requested --patch (filtered out)
 
 
 def patch_of(game_version: str) -> str:
@@ -219,6 +220,7 @@ def patch_of(game_version: str) -> str:
 
 
 def extract_rows(match: dict, *, valid_champions: Optional[set[str]] = None,
+                 keep_patch: Optional[str] = None,
                  stats: Optional[ExtractStats] = None) -> list[dict]:
     """Turn one Match-V5 payload into up to 2 labeled rows (one per team).
 
@@ -226,6 +228,13 @@ def extract_rows(match: dict, *, valid_champions: Optional[set[str]] = None,
     positions, unmapped champions). Each row is this team's draft view:
     {matchId, patch, queueId, side(100/200), win(0/1), allies{role:champ},
      enemies{role:champ}}.
+
+    `keep_patch` (e.g. "16.12") restricts output to a single major.minor patch —
+    games on any other patch are dropped (counted as `off_patch`, NOT as
+    `matches_skipped`, since they're valid games, just not the one we want). This
+    is how "current-patch-only" collection works: right after a patch drop most of
+    a player's recent history is the PREVIOUS patch, so we fetch broadly and keep
+    only the matching games.
     """
     info = match.get("info", {})
     meta = match.get("metadata", {})
@@ -234,6 +243,9 @@ def extract_rows(match: dict, *, valid_champions: Optional[set[str]] = None,
         return []
     if info.get("gameDuration", 0) < MIN_GAME_SECONDS:
         if stats: stats.matches_skipped += 1
+        return []
+    if keep_patch is not None and patch_of(info.get("gameVersion", "")) != keep_patch:
+        if stats: stats.off_patch += 1
         return []
 
     teams: dict[int, dict] = {100: {}, 200: {}}
@@ -281,6 +293,21 @@ def extract_rows(match: dict, *, valid_champions: Optional[set[str]] = None,
 
 
 # --- orchestration -------------------------------------------------------
+# The Emerald+ ladder, high (apex) to low. Non-apex rungs are walked division
+# I -> IV; apex tiers are a single league endpoint (no divisions).
+TIER_LADDER = ["CHALLENGER", "GRANDMASTER", "MASTER", "DIAMOND", "EMERALD",
+               "PLATINUM", "GOLD", "SILVER", "BRONZE", "IRON"]
+DIVISIONS = ["I", "II", "III", "IV"]
+
+
+def ladder_from(min_tier: str) -> list[str]:
+    """Tiers at or above `min_tier`, high to low. 'EMERALD' -> Emerald+."""
+    min_tier = min_tier.upper()
+    if min_tier not in TIER_LADDER:
+        raise ValueError(f"Unknown tier {min_tier!r}; pick one of {TIER_LADDER}.")
+    return TIER_LADDER[: TIER_LADDER.index(min_tier) + 1]
+
+
 def _load_seen(out_path: Path) -> set[str]:
     """matchIds already in the output file, so re-runs are incremental."""
     seen: set[str] = set()
@@ -294,55 +321,164 @@ def _load_seen(out_path: Path) -> set[str]:
     return seen
 
 
-def collect(client: RiotClient, *, tier: str, division: str = "I",
-            target_games: int = 5000, matches_per_seed: int = 20,
-            seed_pages: int = 3, out_path: Path,
-            valid_champions: Optional[set[str]] = None,
-            progress_every: int = 25) -> ExtractStats:
-    """Seed -> matchIds -> matches -> labeled rows, appended to `out_path`
-    (JSONL). Stops once `target_games` distinct complete matches are written.
-    Resumable: matches already present are skipped."""
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    seen = _load_seen(out_path)
-    stats = ExtractStats()
-    start_count = len(seen)
-    # Only resolve as many seeds as the target needs (2x margin for dedup/skips).
-    remaining = max(0, target_games - start_count)
-    max_seeds = max(8, math.ceil(remaining / max(1, matches_per_seed)) * 2)
-    print(f"Seeding {tier} {division if tier.upper() not in APEX_TIERS else ''} "
-          f"on {client.platform} (region {client.region}); up to {max_seeds} seeds...")
-    puuids = client.seed_puuids(tier, division, pages=seed_pages, limit=max_seeds)
-    print(f"  {len(puuids)} seed players; {start_count} matches already collected.")
+def _ledger_path(out_path: Path) -> Path:
+    """Sidecar listing EVERY matchId we fetched (kept or not). With a patch
+    filter, off-patch matches aren't written to the output, so without this they
+    would be refetched on every resume; the ledger makes resume skip them too."""
+    return out_path.with_suffix(out_path.suffix + ".seen")
 
-    with open(out_path, "a", encoding="utf-8") as out:
-        for pi, puuid in enumerate(puuids):
+
+def _load_ledger(out_path: Path) -> set[str]:
+    p = _ledger_path(out_path)
+    if not p.exists():
+        return set()
+    with open(p, encoding="utf-8") as f:
+        return {line.strip() for line in f if line.strip()}
+
+
+def _drain_seeds(client: RiotClient, puuids: list[str], *, seen: set[str],
+                 out, ledger, stats: ExtractStats, start_count: int,
+                 target_games: int, matches_per_seed: int,
+                 keep_patch: Optional[str], valid_champions: Optional[set[str]],
+                 progress_every: int, label: str = "") -> None:
+    """Process a batch of seed puuids: fetch each player's recent matches, extract
+    labeled rows, append to `out` (and every fetched id to `ledger`). Mutates the
+    shared `seen`/`stats` so callers can drive it across many tiers/divisions
+    toward one cumulative `target_games`. Stops early once the target is hit."""
+    for pi, puuid in enumerate(puuids):
+        if stats.matches_ok + start_count >= target_games:
+            return
+        for mid in client.match_ids(puuid, count=matches_per_seed):
+            if mid in seen:
+                continue
+            seen.add(mid)
+            if ledger is not None:
+                ledger.write(mid + "\n")
+                ledger.flush()
+            m = client.match(mid)
+            if not m:
+                continue
+            for row in extract_rows(m, valid_champions=valid_champions,
+                                    keep_patch=keep_patch, stats=stats):
+                out.write(json.dumps(row) + "\n")
+            out.flush()
+            if stats.matches_ok and stats.matches_ok % progress_every == 0:
+                print(f"  [{label}{pi+1}/{len(puuids)} seeds] "
+                      f"{stats.matches_ok} kept, {stats.rows} rows, "
+                      f"{stats.off_patch} off-patch, {stats.matches_skipped} skipped, "
+                      f"{client.request_count} API calls")
             if stats.matches_ok + start_count >= target_games:
-                break
-            for mid in client.match_ids(puuid, count=matches_per_seed):
-                if mid in seen:
-                    continue
-                seen.add(mid)
-                m = client.match(mid)
-                if not m:
-                    continue
-                for row in extract_rows(m, valid_champions=valid_champions, stats=stats):
-                    out.write(json.dumps(row) + "\n")
-                out.flush()
-                if stats.matches_ok and stats.matches_ok % progress_every == 0:
-                    print(f"  [{pi+1}/{len(puuids)} seeds] "
-                          f"{stats.matches_ok} matches, {stats.rows} rows, "
-                          f"{stats.matches_skipped} skipped, "
-                          f"{client.request_count} API calls")
-                if stats.matches_ok + start_count >= target_games:
-                    break
+                return
 
+
+def _report(stats: ExtractStats, start_count: int, out_path: Path,
+            keep_patch: Optional[str]) -> None:
     print(f"\nDone. {stats.matches_ok} new matches -> {stats.rows} rows "
-          f"(total ~{start_count + stats.rows} rows in {out_path.name}).")
+          f"(total ~{start_count + stats.matches_ok} matches in {out_path.name}).")
+    if keep_patch is not None:
+        print(f"  patch filter {keep_patch}: dropped {stats.off_patch} off-patch games.")
     print(f"  skipped {stats.matches_skipped} (remakes/incomplete/unknown).")
     if stats.unmapped_champs:
         print("  ! UNMAPPED champion names (add to CHAMPION_ALIASES if real):")
         for name, n in stats.unmapped_champs.most_common(15):
             print(f"      {name!r}: {n}")
+
+
+def collect(client: RiotClient, *, tier: str, division: str = "I",
+            target_games: int = 5000, matches_per_seed: int = 20,
+            seed_pages: int = 3, out_path: Path,
+            valid_champions: Optional[set[str]] = None,
+            keep_patch: Optional[str] = None,
+            progress_every: int = 25) -> ExtractStats:
+    """Seed -> matchIds -> matches -> labeled rows, appended to `out_path`
+    (JSONL). Stops once `target_games` distinct complete matches are written.
+    Resumable: matches already present (or in the .seen ledger) are skipped.
+    `keep_patch` restricts output to a single patch (see extract_rows)."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    seen = _load_seen(out_path) | _load_ledger(out_path)
+    stats = ExtractStats()
+    start_count = len(_load_seen(out_path))
+    # Only resolve as many seeds as the target needs (2x margin for dedup/skips).
+    # A patch filter slashes the per-seed yield, so widen the margin further.
+    remaining = max(0, target_games - start_count)
+    margin = 6 if keep_patch is not None else 2
+    max_seeds = max(8, math.ceil(remaining / max(1, matches_per_seed)) * margin)
+    print(f"Seeding {tier} {division if tier.upper() not in APEX_TIERS else ''} "
+          f"on {client.platform} (region {client.region}); up to {max_seeds} seeds...")
+    puuids = client.seed_puuids(tier, division, pages=seed_pages, limit=max_seeds)
+    print(f"  {len(puuids)} seed players; {start_count} matches already collected.")
+
+    with open(out_path, "a", encoding="utf-8") as out, \
+            open(_ledger_path(out_path), "a", encoding="utf-8") as ledger:
+        _drain_seeds(client, puuids, seen=seen, out=out, ledger=ledger, stats=stats,
+                     start_count=start_count, target_games=target_games,
+                     matches_per_seed=matches_per_seed, keep_patch=keep_patch,
+                     valid_champions=valid_champions, progress_every=progress_every)
+
+    _report(stats, start_count, out_path, keep_patch)
+    return stats
+
+
+def collect_ladder(client: RiotClient, *, min_tier: str = "EMERALD",
+                   tiers: Optional[list[str]] = None,
+                   target_games: int = 1000, matches_per_seed: int = 30,
+                   seed_pages: int = 5, out_path: Path,
+                   valid_champions: Optional[set[str]] = None,
+                   keep_patch: Optional[str] = None,
+                   progress_every: int = 25) -> ExtractStats:
+    """Collect across a set of tiers, walking them in order and, within each
+    non-apex tier, divisions I -> IV, until `target_games` matches are written or
+    the seeds are exhausted. By default the tiers are the Emerald+ band (high to
+    low via `ladder_from(min_tier)`); pass `tiers` to seed an EXPLICIT ordered set
+    instead (e.g. ['EMERALD'] for Emerald only, or ['EMERALD','DIAMOND'] to start
+    low and climb). One cumulative `seen`/`stats`/output/ledger is shared across
+    all rungs, so the target counts distinct matches across them. Resumable like
+    `collect`."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    seen = _load_seen(out_path) | _load_ledger(out_path)
+    stats = ExtractStats()
+    start_count = len(_load_seen(out_path))
+    if tiers:
+        tiers = [t.upper() for t in tiers]
+        for t in tiers:
+            if t not in TIER_LADDER:
+                raise ValueError(f"Unknown tier {t!r}; pick from {TIER_LADDER}.")
+        band = " ".join(tiers)
+    else:
+        tiers = ladder_from(min_tier)
+        band = f"{min_tier.upper()}+"
+    print(f"=== LADDER COLLECT {band} on {client.platform} "
+          f"(region {client.region}) ===")
+    print(f"  tiers: {tiers}")
+    print(f"  target {target_games} matches"
+          + (f", patch {keep_patch} only" if keep_patch else "")
+          + f"; {start_count} already collected.")
+
+    with open(out_path, "a", encoding="utf-8") as out, \
+            open(_ledger_path(out_path), "a", encoding="utf-8") as ledger:
+        for tier in tiers:
+            if stats.matches_ok + start_count >= target_games:
+                break
+            rungs = [None] if tier in APEX_TIERS else DIVISIONS
+            for division in rungs:
+                if stats.matches_ok + start_count >= target_games:
+                    break
+                got = stats.matches_ok
+                puuids = client.seed_puuids(tier, division or "I", pages=seed_pages)
+                rung = tier if division is None else f"{tier} {division}"
+                print(f"  -- {rung}: {len(puuids)} seeds "
+                      f"({stats.matches_ok + start_count}/{target_games} matches) --")
+                _drain_seeds(client, puuids, seen=seen, out=out, ledger=ledger,
+                             stats=stats, start_count=start_count,
+                             target_games=target_games,
+                             matches_per_seed=matches_per_seed, keep_patch=keep_patch,
+                             valid_champions=valid_champions,
+                             progress_every=progress_every, label=f"{rung} ")
+                if keep_patch and (stats.matches_ok - got) == 0 and tier in APEX_TIERS:
+                    # An apex tier with zero on-patch yield this rung is fine; keep going.
+                    pass
+
+    _report(stats, start_count, out_path, keep_patch)
     return stats
 
 
@@ -393,6 +529,19 @@ def _selftest() -> bool:
     remake["info"]["gameDuration"] = 120
     if extract_rows(remake) != []:
         print("  FAIL: remake not skipped"); ok = False
+    # patch filter: matching patch kept, off-patch dropped (and counted off_patch)
+    pstats = ExtractStats()
+    valid = {"Aatrox", "LeeSin", "Ahri", "Jinx", "Thresh",
+             "Darius", "Wukong", "Zed", "Caitlyn", "Lulu"}
+    if len(extract_rows(synthetic, valid_champions=valid, keep_patch="14.10")) != 2:
+        print("  FAIL: keep_patch dropped a matching-patch game"); ok = False
+    if extract_rows(synthetic, valid_champions=valid, keep_patch="16.12", stats=pstats) != []:
+        print("  FAIL: keep_patch kept an off-patch game"); ok = False
+    if pstats.off_patch != 1:
+        print(f"  FAIL: off_patch counter = {pstats.off_patch}, expected 1"); ok = False
+    # ladder_from must yield Emerald+ high->low
+    if ladder_from("EMERALD") != ["CHALLENGER", "GRANDMASTER", "MASTER", "DIAMOND", "EMERALD"]:
+        print(f"  FAIL: ladder_from('EMERALD') = {ladder_from('EMERALD')}"); ok = False
     print("  OK: extract_rows self-test passed" if ok else "  self-test FAILED")
     return ok
 
@@ -408,8 +557,17 @@ def main(argv=None):
     p.add_argument("--region", help="regional route: americas|asia|europe|sea "
                                     "(derived from platform if omitted)")
     p.add_argument("--tier", default="DIAMOND",
-                   help="rank tier to seed from (default DIAMOND, to match config.DEFAULT_RANK)")
+                   help="single rank tier to seed from (default DIAMOND); ignored if --emerald-plus/--min-tier given")
     p.add_argument("--division", default="I", help="I-IV for non-apex tiers (default I)")
+    p.add_argument("--emerald-plus", action="store_true",
+                   help="collect across the whole Emerald+ band (shorthand for --min-tier EMERALD)")
+    p.add_argument("--min-tier", help="collect across a tier band high->low from this tier "
+                                      "(e.g. EMERALD for Emerald+); overrides --tier")
+    p.add_argument("--tiers", help="explicit comma-separated tiers to seed, in order "
+                                   "(e.g. EMERALD or EMERALD,DIAMOND); each non-apex tier "
+                                   "walks divisions I-IV. Overrides --min-tier/--emerald-plus.")
+    p.add_argument("--patch", help="keep ONLY this major.minor patch, e.g. 16.12 "
+                                   "(fetches broadly, drops off-patch games)")
     p.add_argument("--target", type=int, default=5000, help="target distinct matches")
     p.add_argument("--seed-pages", type=int, default=3, help="League-V4 entry pages to seed")
     p.add_argument("--matches-per-seed", type=int, default=20)
@@ -439,9 +597,18 @@ def main(argv=None):
 
     client = RiotClient(api_key, args.platform, args.region)
     out_path = Path(args.out) if args.out else _default_out()
-    collect(client, tier=args.tier, division=args.division,
-            target_games=args.target, matches_per_seed=args.matches_per_seed,
-            seed_pages=args.seed_pages, out_path=out_path, valid_champions=valid)
+    tiers = [t.strip().upper() for t in args.tiers.split(",") if t.strip()] if args.tiers else None
+    min_tier = "EMERALD" if args.emerald_plus else args.min_tier
+    if tiers or min_tier:
+        collect_ladder(client, tiers=tiers, min_tier=min_tier or "EMERALD",
+                       target_games=args.target, matches_per_seed=args.matches_per_seed,
+                       seed_pages=args.seed_pages, out_path=out_path,
+                       valid_champions=valid, keep_patch=args.patch)
+    else:
+        collect(client, tier=args.tier, division=args.division,
+                target_games=args.target, matches_per_seed=args.matches_per_seed,
+                seed_pages=args.seed_pages, out_path=out_path, valid_champions=valid,
+                keep_patch=args.patch)
 
 
 if __name__ == "__main__":

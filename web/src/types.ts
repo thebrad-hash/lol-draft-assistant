@@ -45,6 +45,33 @@ export interface DraftState {
   pickingForRole: Role;
   poolFilter?: string[]; // optional restriction to these champion ids
   weights: Weights;
+  // Which win-prob model dataset to rank with ('all' backbone, or a patch like
+  // '16.12'). Omitted => the server's default. Lives in DraftState so it flows
+  // through every recommend/board/pick-order request that spreads the state.
+  dataset?: string;
+}
+
+// --- win-prob model datasets (the patch toggle: GET /api/models) ---
+export interface ModelDataset {
+  id: string; // 'all' | '16.12' | ...
+  label: string; // 'All patches' | 'Patch 16.12'
+  patch: string | null;
+  rank: string | null;
+  nMatches: number | null;
+  nRows: number | null;
+  cvAuc: number | null;
+  cvLogloss: number | null;
+  nullLogloss: number | null;
+  baselineLogloss: number | null;
+  cvEce: number | null;
+  beatsNull: boolean; // OOS log-loss actually beats the 50/50 null (else it's noise)
+  builtAt: string | null;
+  hasUncertainty: boolean; // bootstrap ensemble present => error bars
+}
+
+export interface ModelsResponse {
+  datasets: ModelDataset[];
+  default: string;
 }
 
 export interface Contribution {
@@ -76,6 +103,27 @@ export interface Recommendation {
   // omitted by the offline mock, in which case the UI falls back to totalEv.
   winProb?: number | null;
   features?: DraftFeatures | null;
+  // Bootstrap error bars (present only when the coefficient ensemble has been
+  // built: `python -m lol_draft.bootstrap`). winProbMedian is the central
+  // estimate; [winProbLo, winProbHi] is the ciLoPct–ciHiPct interval (default
+  // 5th–95th). tiedWithTop marks picks the bootstrap can't distinguish from the
+  // top pick: probTopBetter (fraction of resamples where the top pick beats this
+  // one) fell below tieThreshold. None of these are on the top pick itself.
+  winProbMedian?: number;
+  winProbLo?: number;
+  winProbHi?: number;
+  winProbStd?: number;
+  ciLoPct?: number;
+  ciHiPct?: number;
+  tiedWithTop?: boolean;
+  probTopBetter?: number | null;
+  tieThreshold?: number;
+  // Relative value vs the role's field: winProbField is the mean win% across ALL
+  // candidates for this role; winProbDelta is this pick's win% minus that mean.
+  // Lets "best available" read as a positive choice even when the whole board's
+  // absolute win% sits below 50% (a team-level baseline deficit).
+  winProbField?: number | null;
+  winProbDelta?: number | null;
 }
 
 // --- all-roles board (top picks for every role at once) ---
@@ -106,6 +154,20 @@ export interface LiveStatus {
   demo?: boolean;
   reason?: string;
   draft?: LiveDraft | null;
+  // Whether THIS client is the host (server reads its local League client) or a
+  // remote friend who should follow the lobby broadcast instead. Set by the
+  // server per-request; may be overridden locally via ?live=host|follow.
+  isLocal?: boolean;
+  // friend mode: we're applying the lobby's broadcast draft from a teammate
+  following?: boolean;
+  // friend mode: name of the teammate currently broadcasting (when known)
+  sourceName?: string | null;
+}
+
+// Who is currently broadcasting the live draft into a lobby (any member can be).
+export interface LiveSource {
+  memberId: string | null;
+  name: string;
 }
 
 // --- team-vs-team evaluation (the full-draft verdict) ---
@@ -113,8 +175,9 @@ export interface EvalLane {
   role: Role;
   a: string; // your champion id
   b: string; // enemy champion id
-  dpp: number; // your-perspective lane winrate delta (pct points)
+  dpp: number | null; // your-perspective lane winrate delta (pp); null = no matchup data (off-role pick)
   favored: 'A' | 'B' | 'even';
+  noData?: boolean; // both picked, but the source data has no head-to-head for this pairing
 }
 
 export interface EvalSwing {
@@ -183,7 +246,22 @@ export interface LobbyMember {
   pool: string[]; // champion ids
 }
 
+export interface ChatMessage {
+  id: string;
+  memberId: string;
+  name: string;
+  text: string;
+  ts: number; // unix seconds (server clock)
+}
+
 export interface Lobby {
   id: string;
   members: LobbyMember[];
+  messages?: ChatMessage[];
+  // The broadcast champ-select draft (shared across the premade — no per-player
+  // role), the server stamp of when it last refreshed, and who's broadcasting.
+  // Absent (null) when nobody is publishing or the broadcast has gone stale.
+  liveDraft?: LiveDraft | null;
+  liveAt?: number | null;
+  liveSource?: LiveSource | null;
 }

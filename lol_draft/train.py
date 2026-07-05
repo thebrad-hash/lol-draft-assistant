@@ -50,6 +50,19 @@ def load_rows(path: Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
+def filter_patch(rows: list[dict], patch: str) -> tuple[list[dict], str]:
+    """Apply the --patch selector. Returns (filtered rows, human label).
+    `auto` keeps the modal patch; `all` keeps everything; anything else keeps
+    that exact patch string. Shared by train + bootstrap so both select games
+    identically."""
+    if patch == "auto":
+        modal = Counter(r["patch"] for r in rows).most_common(1)[0][0]
+        return [r for r in rows if r["patch"] == modal], modal
+    if patch == "all":
+        return rows, "all"
+    return [r for r in rows if r["patch"] == patch], patch
+
+
 def build_matrix(store: Store, rows: list[dict], rank: str):
     """rows -> (X, y, groups, coverage). One feature vector per row, via the
     SAME draft_features the live tool uses (train/inference parity)."""
@@ -136,17 +149,9 @@ def main(argv=None):
     ap.add_argument("--out", default=str(default_model_path()))
     args = ap.parse_args(argv)
 
-    rows = load_rows(Path(args.data))
-    patch_dist = Counter(r["patch"] for r in rows)
-    if args.patch == "auto":
-        patch = patch_dist.most_common(1)[0][0]
-        rows = [r for r in rows if r["patch"] == patch]
-        patch_label = patch
-    elif args.patch == "all":
-        patch_label = "all"
-    else:
-        rows = [r for r in rows if r["patch"] == args.patch]
-        patch_label = args.patch
+    all_rows = load_rows(Path(args.data))
+    patch_dist = Counter(r["patch"] for r in all_rows)
+    rows, patch_label = filter_patch(all_rows, args.patch)
 
     print(f"=== DATA ===")
     print(f"  file: {args.data}")

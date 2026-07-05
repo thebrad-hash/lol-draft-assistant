@@ -79,19 +79,23 @@ export function TeamAnalysis() {
 }
 
 function LaneRow({ ln }: { ln: EvalLane }) {
+  const noData = ln.dpp == null;
   return (
-    <div className="lane">
+    <div className={'lane' + (noData ? ' lane--nodata' : '')}>
       <span className="lane__role">{ROLE_LABEL[ln.role]}</span>
-      <span className={'lane__side you' + (ln.favored === 'A' ? ' win' : '')}>
-        <ChampionAvatar id={ln.a} name={name(ln.a)} size={22} dimmed={ln.favored === 'B'} />
+      <span className={'lane__side you' + (!noData && ln.favored === 'A' ? ' win' : '')}>
+        <ChampionAvatar id={ln.a} name={name(ln.a)} size={22} dimmed={!noData && ln.favored === 'B'} />
         <span className="lane__name">{name(ln.a)}</span>
       </span>
-      <span className={'lane__dpp ' + (ln.dpp > 0 ? 'pos' : ln.dpp < 0 ? 'neg' : 'even')}>
-        {pp(ln.dpp)}
+      <span
+        className={'lane__dpp ' + (noData ? 'even' : (ln.dpp as number) > 0 ? 'pos' : (ln.dpp as number) < 0 ? 'neg' : 'even')}
+        title={noData ? 'Off-role pick — no head-to-head matchup data for this pairing' : undefined}
+      >
+        {noData ? 'no data' : pp(ln.dpp as number)}
       </span>
-      <span className={'lane__side enemy' + (ln.favored === 'B' ? ' win' : '')}>
+      <span className={'lane__side enemy' + (!noData && ln.favored === 'B' ? ' win' : '')}>
         <span className="lane__name">{name(ln.b)}</span>
-        <ChampionAvatar id={ln.b} name={name(ln.b)} size={22} dimmed={ln.favored === 'A'} />
+        <ChampionAvatar id={ln.b} name={name(ln.b)} size={22} dimmed={!noData && ln.favored === 'A'} />
       </span>
     </div>
   );

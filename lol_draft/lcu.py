@@ -19,6 +19,8 @@ import json
 import re
 import ssl
 import subprocess
+import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -50,6 +52,10 @@ _champ_map: Optional[dict[int, str]] = None
 # --- credential discovery ---
 def _creds_from_process() -> Optional[tuple[int, str]]:
     """Read --app-port / --remoting-auth-token from the LeagueClientUx process."""
+    # PowerShell only exists on Windows; on a cloud host (Vercel/Linux) skip the
+    # subprocess entirely so /api/live degrades cleanly instead of erroring.
+    if not sys.platform.startswith("win"):
+        return None
     try:
         out = subprocess.run(
             [
@@ -81,11 +87,21 @@ def _creds_from_lockfile() -> Optional[tuple[int, str]]:
     return None
 
 
+_creds_checked_at = 0.0
+_CREDS_TTL = 5.0  # seconds; cap how often discovery (a PowerShell spawn) can run
+
+
 def find_credentials(force: bool = False) -> Optional[tuple[int, str]]:
-    global _creds
-    if _creds and not force:
+    """Discover the running client's LCU port + token. The result — INCLUDING a
+    'not found' (None) — is cached for `_CREDS_TTL`, so a closed client (or a
+    premade all polling Go Live) can't re-spawn the PowerShell process query on
+    every request. The cheap lockfile is tried before that process query."""
+    global _creds, _creds_checked_at
+    now = time.monotonic()
+    if not force and (now - _creds_checked_at) < _CREDS_TTL:
         return _creds
-    _creds = _creds_from_process() or _creds_from_lockfile()
+    _creds = _creds_from_lockfile() or _creds_from_process()
+    _creds_checked_at = now
     return _creds
 
 
