@@ -3,13 +3,16 @@
 # selects from what's uploaded). Everything below is dev/build-machine-only —
 # the PyInstaller desktop artifacts alone are ~200MB and blow the 225MB
 # function cap.
-build/
-dist/
+# Leading slash anchors to the repo root — a bare `dist/` would also match
+# web/dist/, which IS the served UI (that exact mistake once shipped a
+# UI-less deploy: root returned FastAPI's 404).
+/build/
+/dist/
 web/node_modules/
-desktop/
-docs/
-tests/
-tools/
+/desktop/
+/docs/
+/tests/
+/tools/
 *.log
 
 # offline/training data — never read at serve time
