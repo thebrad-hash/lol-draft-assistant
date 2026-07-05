@@ -1,0 +1,18 @@
+# Keep the serverless upload lean: the function needs api/ + lol_draft/ +
+# data/draft.db + data/models/*.json + web/dist only (vercel.json includeFiles
+# selects from what's uploaded). Everything below is dev/build-machine-only —
+# the PyInstaller desktop artifacts alone are ~200MB and blow the 225MB
+# function cap.
+build/
+dist/
+web/node_modules/
+desktop/
+docs/
+tests/
+tools/
+*.log
+
+# offline/training data — never read at serve time
+data/games/
+data/reports/
+data/snapshots/
