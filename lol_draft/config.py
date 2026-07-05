@@ -24,6 +24,11 @@ ROLE_ALIASES = {
 DATA_BASE_URL = "https://pooldesigner.machineloling.com/data"
 DATA_FILES = ["matrices.bin", "index.json", "champions.json"]
 
+# Riot's public version list; first entry is the current live patch (e.g.
+# "16.13.1"). Used ONLY to patch-stamp snapshot archives at fetch time — the
+# machineloling files themselves carry no game-patch field.
+RIOT_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
+
 # A real browser User-Agent (site etiquette: identify, fetch once, cache).
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -58,6 +63,8 @@ else:
     PROJECT_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = PROJECT_DIR / "data" / "raw"
 DB_PATH = PROJECT_DIR / "data" / "draft.db"
+SNAPSHOTS_DIR = PROJECT_DIR / "data" / "snapshots"   # patch-stamped source archives
+REPORTS_DIR = PROJECT_DIR / "data" / "reports"       # audit reports (regenerable)
 
 
 def normalize_role(s: str) -> str:

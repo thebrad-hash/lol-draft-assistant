@@ -3,7 +3,7 @@
 A snapshot of where the app is, to bring a person (or an AI assistant) up to speed.
 For build/run commands and deeper conventions see [CLAUDE.md](CLAUDE.md).
 
-_Last updated: 2026-06-09 · branch `draft-assistant-features` (work below is **not yet
+_Last updated: 2026-07-05 · branch `draft-assistant-features` (work below is **not yet
 committed**)._ The in-app brand was renamed **“LoL Draft Assistant” → “BradDraft”**.
 
 ## What it is
@@ -32,8 +32,8 @@ This is the analytical heart and what differentiates the numbers from a raw z-sc
 1. **Calibrated logistic regression** (`train.py` → `model.py`/`winprob.py`). Four
    team-level features (lane_z, counter_z, synergy_z, champ_strength) → `P(win)`. Fit on
    Riot Match-V5 games, validated **out-of-sample** with GroupKFold on `matchId` (a game’s
-   two anti-correlated rows never split). Held-out AUC ≈ **0.568**, log-loss 0.6866 (beats
-   additive-z 0.6892 and the 0.6931 null); well-calibrated (ECE ≈ 0.011). The draft-only
+   two anti-correlated rows never split). Held-out AUC ≈ **0.569**, log-loss 0.6863 (beats
+   additive-z 0.6893 and the 0.6931 null); well-calibrated (ECE ≈ 0.007). The draft-only
    edge is genuinely small — by design the tool says so rather than faking precision.
 2. **Bootstrap uncertainty** (`bootstrap.py` → `WinProbEnsemble` in `model.py`). Resamples
    whole **games** with replacement (1000×, fixed seed), refits, stores the coefficient
@@ -44,8 +44,22 @@ This is the analytical heart and what differentiates the numbers from a raw z-sc
 3. **Feature-value uncertainty.** champ_strength’s `win_rate` is a binomial proportion with
    known `games`, so each member is resampled from `√(wr(1-wr)/games)` (champion-consistent,
    so shared champs cancel in head-to-heads). This roughly **doubles** the honest interval.
-   *Not done:* the same for the matchup/synergy z-cells (machineloling publishes no per-cell
-   N, so it would be a heuristic proxy off per-champion `games`).
+4. **z-cell uncertainty (WS3).** The matchup/synergy z cells feeding lane_z / counter_z /
+   synergy_z are perturbed too, via an EB normal-normal posterior: published cells are
+   already shrunk, so the residual variance is `v = s²/(s²+1)` (never `z ± SE` — that
+   double-counts on well-sampled cells), with `s² = c/N̂` and `N̂ ≈ G·PR_A·PR_B` a
+   playrate-based per-cell sample-size proxy (machineloling publishes no per-cell N — this
+   is a documented heuristic). Draws are keyed per (cell, replicate) so cells shared by two
+   candidates cancel in head-to-heads, same discipline as champ_strength. The constant `c`
+   lives in `data/models/zcell_noise.json` (`python -m lol_draft.cellnoise fit`:
+   snapshot-calibrated when ≥2 archives with DIFFERENT matrices exist, heuristic fallback
+   otherwise); sampling is on only while that artifact exists (env: `WINPROB_ZCELL=off`,
+   `WINPROB_ZCELL_C`). Effect on the fixed 50-state benchmark
+   (`python -m lol_draft.benchmark`, fallback c=17.96): median top-5 interval width
+   0.040 → 0.053, p90 0.059 → 0.084; adjacent top-5 pairs "too close to call" at the 0.85
+   bar 74% → 88%; candidates tied WITH THE TOP PICK (the UI badge) 24% → 40%. Wider + more
+   ties is intended honesty; the 0.85 threshold was kept — at 40% tied-with-top the badge
+   still separates genuine alternatives from measurably-worse picks.
 4. **Additive-z EV** (`scoring.py`) remains the fallback when the model isn’t loaded; the
    context-adaptive (“auto”) weights only matter in that mode.
 
@@ -121,6 +135,38 @@ Components (`web/src/components`):
 - **Fonts** load from Google Fonts; the offline desktop build falls back to serif/sans
   (self-host woff2 before shipping that build).
 
+## Data freshness (interactions vs strength)
+
+machineloling's matchup/synergy deltas are **interaction terms** — champion main effects
+removed, shrunk toward the mean — and their authors report they are stable across patches;
+champion **strength** is the genuinely non-stationary part. The architecture follows that
+split, and verifies rather than trusts it:
+
+- **Pool interactions across patches.** The z cells are used as-is from the latest fetch;
+  no per-patch alignment. Every fetch is archived patch-stamped (Riot's live patch at fetch
+  time) under `data/snapshots/`, and `python -m lol_draft.cli snapshot-audit` compares
+  consecutive snapshots — per role-pair z correlations plus per-champion break scores (a
+  rework detector). It **alerts, never blocks**: correlation < 0.90 warns, top movers are
+  always listed. The cross-snapshot squared differences it stores are also what calibrates
+  the WS3 cell-noise constant once two snapshots with different matrices exist.
+  First empirical data point (2026-07-05): the May and July fetches carry **byte-identical
+  matrices.bin** while champions.json (playrates/winrates) changed — machineloling itself
+  treats the interactions as slow-moving and the strength data as fast-moving, which is the
+  strongest possible endorsement of this exact split.
+- **Patch-align strength.** The one patch-sensitive feature, `champ_strength`, has an
+  own-data replacement: per-champion, per-patch win rates from our Riot collection under a
+  Beta-Binomial random-walk prior (`python -m lol_draft.champstats build`), leave-one-match-
+  out for training rows, latest posterior for serving. **Currently NOT promoted** — at 10k
+  collected matches the gate failed (held-out log-loss +0.0020 vs a +0.0005 tolerance;
+  calibration improved, ECE 0.0087 → 0.0027, but the coefficient collapsed: external-data
+  bias < own-data variance at this collection size). The machinery ships default-off; the
+  feature source is coupled to the model artifact's meta (`champ_strength_source`), so
+  serve and train can never disagree. Revisit at ~40–80k matches or a hybrid
+  machineloling-anchored prior (separately gated).
+- **Audit cadence:** re-fetch (`build --force`) archives a new snapshot; run
+  `snapshot-audit` after each. Only fetch fresh data deliberately — the committed model was
+  trained against the archived data, and a re-fetch changes `draft.db` under it.
+
 ## Deployment & sharing
 
 - **Vercel** (single function serves UI + API) + **Upstash Redis** for lobby/chat persistence
@@ -134,8 +180,11 @@ Components (`web/src/components`):
 ## Known limitations / next
 
 - All the above is **uncommitted** on `draft-assistant-features`.
-- **Matchup/synergy z-cell uncertainty** not yet propagated (no per-cell N) — would widen
-  intervals further; planned as a heuristic off per-champion `games`.
+- **z-cell noise constant `c` is the heuristic fallback.** Two snapshots are archived
+  (May, July 16.13) but their matrices.bin are byte-identical — machineloling republishes
+  playrates without regenerating the interaction matrices — so there is no cross-snapshot
+  variation to calibrate from yet. `python -m lol_draft.cellnoise fit` guards this and
+  keeps the fallback; re-run it when a snapshot with different matrices lands.
 - Heavy concurrent drafting by a full premade serializes on `_store_lock` (bounded compute,
   not a wedge) — could cache board/recommend results if it gets slow.
 - Self-host fonts for the offline desktop build.

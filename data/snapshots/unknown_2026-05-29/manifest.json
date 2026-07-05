@@ -1,0 +1,29 @@
+{
+  "patch": "unknown",
+  "fetched_at": "2026-05-29T06:44:30.976818+00:00",
+  "archived_at": "2026-07-05T12:58:45.685672+00:00",
+  "source": "https://pooldesigner.machineloling.com/data",
+  "decoder_version": 1,
+  "files": [
+    {
+      "name": "matrices.bin",
+      "sha256": "e56ee31ab0b7386ed3ef0faaec4f2364a4c2c23b36edf38c2a33d9d369c7f52c",
+      "bytes": 754384
+    },
+    {
+      "name": "index.json",
+      "sha256": "5db016897e35da023d62e70118eff0cc00b1c9eb7d8666b25fb8ea5f73c674cf",
+      "bytes": 64378
+    },
+    {
+      "name": "champions.json",
+      "sha256": "097662b6db9473ee24e389a9ce74fd30733fdb7ab4ac48066cb57d87eb4f417c",
+      "bytes": 319558
+    },
+    {
+      "name": "blindability.json",
+      "sha256": "3e3570eee1ea6eec91107c522d4419b5cff1418f4ae5a7c0842b0073beccb7a3",
+      "bytes": 314282
+    }
+  ]
+}

@@ -24,6 +24,14 @@ data/games/
 data/models/*
 !data/models/winprob.json
 !data/models/winprob_bootstrap.json
+# zcell_noise.json arms WS3 z-cell sampling on the serve path (its presence IS
+# the feature flag); champ_strength.json stays ignored while WS2 is unpromoted.
+!data/models/zcell_noise.json
+
+# Snapshot-audit reports are regenerable from data/snapshots/ (which IS
+# committed — the archives are the irreplaceable raw material for the
+# stationarity audit and WS3 noise calibration; keep them).
+data/reports/
 
 # PyInstaller desktop build (large binary; distribute via a Release, not git)
 /build/

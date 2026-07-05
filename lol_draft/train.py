@@ -63,12 +63,25 @@ def filter_patch(rows: list[dict], patch: str) -> tuple[list[dict], str]:
     return [r for r in rows if r["patch"] == patch], patch
 
 
-def build_matrix(store: Store, rows: list[dict], rank: str):
+def build_matrix(store: Store, rows: list[dict], rank: str, strength=None):
     """rows -> (X, y, groups, coverage). One feature vector per row, via the
-    SAME draft_features the live tool uses (train/inference parity)."""
+    SAME draft_features the live tool uses (train/inference parity).
+
+    `strength` (a champstats.ChampStrength, WS2): featurize champ_strength from
+    the own-data EB posterior AS OF EACH ROW'S PATCH, leave-one-match-out —
+    this match's own (1 game, win/loss) contribution is removed per champion
+    before forming the posterior, closing the label leak that GroupKFold
+    cannot catch (the feature would otherwise contain the row's own label)."""
     X, y, groups, cov = [], [], [], []
     for r in rows:
-        f = draft_features(store, r["allies"], r["enemies"], rank)
+        row_strength = None
+        if strength is not None:
+            win = int(r["win"])
+            w_by_champ = {c: win for c in r["allies"].values()}
+            w_by_champ.update({c: 1 - win for c in r["enemies"].values()})
+            row_strength = strength.loo_view(r["patch"], w_by_champ)
+        f = draft_features(store, r["allies"], r["enemies"], rank,
+                           strength=row_strength)
         X.append(f.vector())
         y.append(int(r["win"]))
         groups.append(r["matchId"])
@@ -146,6 +159,13 @@ def main(argv=None):
     ap.add_argument("--rank", default=config.DEFAULT_RANK)
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--C", type=float, default=1.0, help="L2 inverse-reg strength (large ~ unregularized)")
+    ap.add_argument("--champ-strength", choices=["machineloling", "own_data"],
+                    default="machineloling", dest="champ_strength",
+                    help="champ_strength feature source (WS2). own_data uses the "
+                         "EB random-walk posterior from data/models/champ_strength.json "
+                         "(build: python -m lol_draft.champstats build), patch-aligned "
+                         "per row with leave-one-match-out. The choice is stamped into "
+                         "the model's meta so scoring paths featurize identically.")
     ap.add_argument("--out", default=str(default_model_path()))
     args = ap.parse_args(argv)
 
@@ -161,8 +181,17 @@ def main(argv=None):
     if len(rows) < 200:
         print("  ! WARNING: very few rows — metrics below are NOT statistically meaningful.")
 
+    strength = None
+    if args.champ_strength == "own_data":
+        from .champstats import ChampStrength
+        strength = ChampStrength.load()
+        print(f"  champ_strength: own-data EB posterior "
+              f"(kappa0={strength.meta.get('kappa0')}, kappa={strength.meta.get('kappa')}, "
+              f"{strength.meta.get('n_champions')} champs, "
+              f"latest patch {strength.latest_patch}; LOO per row)")
+
     with Store() as store:
-        X, y, groups, cov = build_matrix(store, rows, args.rank)
+        X, y, groups, cov = build_matrix(store, rows, args.rank, strength=strength)
 
     print(f"  win rate: {y.mean():.3f}  (should be ~0.5 — both perspectives present)")
     full = sum(1 for c in cov if c["lane_z"] == 5 and c["counter_z"] == 20
@@ -212,6 +241,13 @@ def main(argv=None):
         "cv_auc": mm["auc"], "cv_brier": mm["brier"], "cv_ece": ece,
         "baseline_logloss": mb["log_loss"], "null_logloss": mn["log_loss"],
     }
+    if strength is not None:
+        # The coupling that keeps train and serve featurizing identically:
+        # scoring paths read this and load the matching strength artifact.
+        meta["champ_strength_source"] = "own_data_eb"
+        meta["champ_strength_meta"] = {
+            k: strength.meta.get(k)
+            for k in ("built_at", "kappa0", "kappa", "latest_patch", "n_matches")}
     model = WinProbModel.from_sklearn(scaler, clf, meta)
     out = model.save(args.out)
 

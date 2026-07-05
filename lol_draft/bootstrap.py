@@ -90,6 +90,10 @@ def main(argv=None):
     ap.add_argument("--iters", type=int, default=1000, help="bootstrap resamples (refits)")
     ap.add_argument("--C", type=float, default=1.0, help="L2 inverse-reg strength (match the deployed model)")
     ap.add_argument("--seed", type=int, default=12345, help="RNG seed -> reproducible ensemble")
+    ap.add_argument("--champ-strength", choices=["machineloling", "own_data"],
+                    default="machineloling", dest="champ_strength",
+                    help="champ_strength feature source — MUST match the deployed "
+                         "model's (see winprob.json meta champ_strength_source)")
     ap.add_argument("--out", default=str(default_ensemble_path()))
     args = ap.parse_args(argv)
 
@@ -100,8 +104,14 @@ def main(argv=None):
     print(f"  patch: {patch_label}   rows: {len(rows)}   matches (resample unit): {n_matches}")
     print(f"  iters: {args.iters}   C: {args.C}   seed: {args.seed}")
 
+    strength = None
+    if args.champ_strength == "own_data":
+        from .champstats import ChampStrength
+        strength = ChampStrength.load()
+        print(f"  champ_strength: own-data EB posterior (LOO per row)")
+
     with Store() as store:
-        X, y, groups, _cov = build_matrix(store, rows, args.rank)
+        X, y, groups, _cov = build_matrix(store, rows, args.rank, strength=strength)
 
     def progress(i, n):
         if i == 1 or i % 100 == 0 or i == n:
@@ -115,6 +125,8 @@ def main(argv=None):
         "n_iter": args.iters, "seed": args.seed, "C": args.C,
         "patch": patch_label, "rank": args.rank,
         "n_rows": len(rows), "n_matches": n_matches,
+        "champ_strength_source": ("own_data_eb" if strength is not None
+                                  else "machineloling"),
         "resample_unit": "game (matchId)",
         "wall_clock_s": elapsed,
         "per_refit_ms": 1000.0 * elapsed / max(args.iters, 1),

@@ -18,7 +18,8 @@ import random
 from dataclasses import dataclass, field
 
 from . import config
-from .features import N_TEAM, DraftFeatures, draft_features
+from .features import (N_CROSS, N_LANES, N_SYNERGY_PAIRS, N_TEAM,
+                       DraftFeatures, draft_features)
 from .model import WinProbEnsemble, WinProbModel, _percentile
 from .scoring import DraftState
 from .store import Store
@@ -45,6 +46,109 @@ def _stable_normals(n: int, *key) -> list[float]:
     digest = hashlib.sha256("|".join(str(p) for p in key).encode()).digest()
     rng = random.Random(int.from_bytes(digest[:8], "big"))
     return [rng.gauss(0.0, 1.0) for _ in range(n)]
+
+
+class ZCellNoise:
+    """Cell-consistent draws of matchup/synergy z-cell uncertainty (WS3).
+
+    Published z cells are ALREADY shrunk toward the mean, so treating each
+    published value as the posterior mean of a normal-normal EB model with
+    z_true ~ N(0, tau^2 = 1) and per-cell observation noise s^2 leaves the
+    remaining posterior variance
+
+        v_cell = s^2 / (s^2 + 1)      (< 1 by construction)
+
+    NOT `z_pub ± SE` — that would double-count uncertainty on well-sampled
+    cells. Per-cell sample size is not published; the proxy is
+    N̂ = G_rolepair · PR_A · PR_B (per-role playrates + role game totals, with
+    G_rolepair the mean of the two roles' totals) and s^2 = c / N̂ with the
+    single global constant `c` from data/models/zcell_noise.json (snapshot-
+    calibrated when two archives exist, heuristic fallback otherwise). N̂ -> 0
+    degrades to v -> 1: an unrepresented pairing gets full population noise.
+
+    Draws are deterministically keyed on the CELL identity (mode + roles +
+    champions) per replicate index, and cached — a cell shared between two
+    candidate evaluations in the same replicate gets the identical draw and
+    cancels in head-to-head comparisons, same discipline as the
+    champ_strength resampling."""
+
+    def __init__(self, store: Store, rank: str, n: int, c: float,
+                 seed: int = FV_SEED_DEFAULT):
+        self.store, self.rank, self.n, self.c, self.seed = store, rank, n, c, seed
+        self._pr: dict[str, dict[str, float]] = {}
+        self._g: dict[str, int] = {}
+        self._draws: dict[tuple, list[float]] = {}
+
+    def _role(self, role: str):
+        if role not in self._pr:
+            self._pr[role] = self.store.pick_rates(self.rank, role)
+            self._g[role] = self.store.role_games(self.rank, role)
+
+    def v_cell(self, role_a: str, role_b: str, champ_a: str, champ_b: str) -> float:
+        self._role(role_a)
+        self._role(role_b)
+        n_hat = (0.5 * (self._g[role_a] + self._g[role_b])
+                 * self._pr[role_a].get(champ_a, 0.0)
+                 * self._pr[role_b].get(champ_b, 0.0))
+        if n_hat <= 0.0:
+            return 1.0                       # never seen together: full prior sd
+        s2 = self.c / n_hat
+        return s2 / (s2 + 1.0)
+
+    def draws(self, mode: str, role_a: str, role_b: str,
+              champ_a: str, champ_b: str) -> list[float]:
+        key = (mode, role_a, role_b, champ_a, champ_b)
+        cached = self._draws.get(key)
+        if cached is not None:
+            return cached
+        sd = math.sqrt(self.v_cell(role_a, role_b, champ_a, champ_b))
+        normals = _stable_normals(self.n, self.seed, "zcell", *key)
+        out = [sd * x for x in normals]
+        self._draws[key] = out
+        return out
+
+    def sum_series(self, cells: list[tuple]) -> list[float]:
+        """Σ sign·ε over the given (mode, ra, rb, a, b, sign) cells, per member."""
+        total = [0.0] * self.n
+        for mode, ra, rb, a, b, sign in cells:
+            d = self.draws(mode, ra, rb, a, b)
+            if sign == 1.0:
+                for i in range(self.n):
+                    total[i] += d[i]
+            else:
+                for i in range(self.n):
+                    total[i] += sign * d[i]
+        return total
+
+
+class PosteriorNoise:
+    """Champion-consistent draws of each champion's edge from its own-data EB
+    posterior (WS2): edge_b = clamp(m - 0.5 + sqrt(v) * z_b), the Normal(m, √v)
+    approximation of the Beta posterior. Same interface, keying discipline and
+    cache as WinRateNoise, so it's a drop-in for the uncertainty path when the
+    model was trained on own-data strength. Champion-level: the draw key ignores
+    role, matching the feature's keying."""
+
+    def __init__(self, strength, n: int, seed: int = FV_SEED_DEFAULT):
+        self.strength, self.n, self.seed = strength, n, seed
+        self._cache: dict[str, list[float]] = {}
+
+    def edge_draws(self, role: str, champ: str) -> list[float]:
+        cached = self._cache.get(champ)
+        if cached is not None:
+            return cached
+        edge = self.strength.edge(champ)
+        if edge is None:
+            draws = [0.0] * self.n           # unknown champ contributes nothing
+        else:
+            sd = self.strength.sd(champ)
+            if sd == 0.0:
+                draws = [edge] * self.n
+            else:
+                normals = _stable_normals(self.n, self.seed, "own_data", champ)
+                draws = [min(0.5, max(-0.5, edge + sd * z)) for z in normals]
+        self._cache[champ] = draws
+        return draws
 
 
 class WinRateNoise:
@@ -131,11 +235,13 @@ class CandidateUncertainty:
     hi_pct: float = 95.0
 
 
-def _enumerate_candidates(store: Store, state: DraftState, rank: str
+def _enumerate_candidates(store: Store, state: DraftState, rank: str,
+                          strength=None, collect_cells: bool = False
                           ) -> tuple[list[tuple[str, DraftFeatures]], list[str]]:
     """Shared candidate enumeration + feature build for the point and uncertainty
     rankers. Returns ([(champion, features)], warnings). Availability rules (bans,
-    picked, pool) mirror `scoring.score_draft` exactly."""
+    picked, pool) mirror `scoring.score_draft` exactly. `strength` (WS2) selects
+    champ_strength's source — pass the ChampStrength matching the model's meta."""
     my_role = state.my_role
     warnings: list[str] = []
     valid = store.all_champions()
@@ -160,15 +266,18 @@ def _enumerate_candidates(store: Store, state: DraftState, rank: str
     out: list[tuple[str, DraftFeatures]] = []
     for c in candidates:
         my_team = {**allies, my_role: c}
-        out.append((c, draft_features(store, my_team, enemies, rank)))
+        out.append((c, draft_features(store, my_team, enemies, rank,
+                                      strength=strength,
+                                      collect_cells=collect_cells)))
     return out, warnings
 
 
 def rank_candidates(store: Store, state: DraftState, model: WinProbModel,
-                    *, rank: str | None = None) -> tuple[list[CandidateWinProb], list[str]]:
+                    *, rank: str | None = None, strength=None
+                    ) -> tuple[list[CandidateWinProb], list[str]]:
     """Return (candidates ranked by P(win) desc, warnings)."""
     rank = rank or config.DEFAULT_RANK
-    feats, warnings = _enumerate_candidates(store, state, rank)
+    feats, warnings = _enumerate_candidates(store, state, rank, strength)
     results = [
         CandidateWinProb(
             champion=c,
@@ -189,6 +298,8 @@ def rank_candidates_uncertain(
     *, rank: str | None = None, point_model: WinProbModel | None = None,
     tie_threshold: float = TIE_THRESHOLD_DEFAULT,
     propagate_feature_uncertainty: bool = True, fv_seed: int = FV_SEED_DEFAULT,
+    strength=None, z_cell_c: float | None = None,
+    _vectors_out: list | None = None,
 ) -> tuple[list[CandidateUncertainty], list[str]]:
     """Rank candidates by MEDIAN win probability and attach an error bar to each
     (90% interval + sd), then flag every pick statistically tied with the top pick.
@@ -213,13 +324,36 @@ def rank_candidates_uncertain(
     verdict. Below `tie_threshold` -> 'too close to call' (`tied_with_top`).
     """
     rank = rank or config.DEFAULT_RANK
-    feats, warnings = _enumerate_candidates(store, state, rank)
     n = len(ensemble.members)
+    z_noise = (ZCellNoise(store, rank, n, z_cell_c, fv_seed)
+               if (propagate_feature_uncertainty and z_cell_c is not None
+                   and z_cell_c > 0) else None)
+    feats, warnings = _enumerate_candidates(store, state, rank, strength,
+                                            collect_cells=z_noise is not None)
 
     my_role = state.my_role
     allies = {r: c for r, c in state.allies.items() if r != my_role}
     enemies = dict(state.enemies)
-    noise = WinRateNoise(store, rank, n, fv_seed) if propagate_feature_uncertainty else None
+    # Feature-value noise source follows the feature source: own-data models
+    # draw from the EB Beta posterior (champion-keyed), machineloling models
+    # from the published win rate's binomial SE. Same interface either way.
+    noise = None
+    if propagate_feature_uncertainty:
+        noise = (PosteriorNoise(strength, n, fv_seed) if strength is not None
+                 else WinRateNoise(store, rank, n, fv_seed))
+
+    # z-cell noise (WS3): the fixed picks' cells are shared by every candidate,
+    # so their signed draw-sum is computed ONCE; each candidate adds only the
+    # cells its own champion introduces. Same shared-base pattern (and the same
+    # cancellation guarantee) as the champ_strength edges below.
+    Z_DENOM = {"lane_z": N_LANES, "counter_z": N_CROSS, "synergy_z": N_SYNERGY_PAIRS}
+    z_base: dict[str, list[float]] = {}
+    z_base_keys: dict[str, set] = {}
+    if z_noise is not None:
+        base_f = draft_features(store, allies, enemies, rank, collect_cells=True)
+        for feat in Z_DENOM:
+            z_base[feat] = z_noise.sum_series(base_f.cells[feat])
+            z_base_keys[feat] = {c[:5] for c in base_f.cells[feat]}
 
     # The allies/enemies are shared across every candidate in this role, so their
     # win-rate-edge sum is computed ONCE here; each candidate just adds its own
@@ -242,6 +376,16 @@ def rank_candidates_uncertain(
         if noise is not None:
             cd = noise.edge_draws(my_role, c)
             series["champ_strength"] = [(base[b] + cd[b]) / N_TEAM for b in range(n)]
+        if z_noise is not None:
+            for feat, denom in Z_DENOM.items():
+                own = [cl for cl in f.cells[feat] if cl[:5] not in z_base_keys[feat]]
+                zb = z_base[feat]
+                if own:
+                    zo = z_noise.sum_series(own)
+                    series[feat] = [f.values[feat] + (zb[b] + zo[b]) / denom
+                                    for b in range(n)]
+                else:
+                    series[feat] = [f.values[feat] + zb[b] / denom for b in range(n)]
         probs = ensemble.distribution(series)
         vectors.append(probs)
         srt = sorted(probs)
@@ -259,6 +403,9 @@ def rank_candidates_uncertain(
     order = sorted(range(len(results)), key=lambda i: results[i].median, reverse=True)
     results = [results[i] for i in order]
     vectors = [vectors[i] for i in order]
+    if _vectors_out is not None:  # benchmark hook: per-candidate member vectors,
+        _vectors_out.extend(      # ranked order (for adjacent-pair tie stats)
+            (results[i].champion, vectors[i]) for i in range(len(results)))
 
     if results:
         top_vec = vectors[0]

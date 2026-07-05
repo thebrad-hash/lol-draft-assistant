@@ -25,6 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import config, lcu, lobby_store
+from .cellnoise import load_c
+from .champstats import ChampStrength, default_strength_path
 from .evaluate import evaluate_teams
 from .features import FEATURE_NAMES
 from .model import (DEFAULT_DATASET, WinProbEnsemble, WinProbModel,
@@ -96,6 +98,7 @@ _store_lock = threading.Lock()  # serialize access to the one shared sqlite conn
 # file caches as (None_mtime, None) and is cheaply re-stat'd each call.
 _models: dict[str, tuple] = {}      # id -> (mtime|None, WinProbModel|None)
 _ensembles: dict[str, tuple] = {}   # id -> (mtime|None, WinProbEnsemble|None)
+_strengths: dict[str, tuple] = {}   # own-data champ_strength artifact (one file)
 _models_lock = threading.Lock()
 # champ->roles map is static (depends only on the built store), so compute it once.
 _champ_roles_cache: Optional[dict] = None
@@ -170,6 +173,20 @@ def get_ensemble(dataset: str = DEFAULT_DATASET) -> Optional[WinProbEnsemble]:
     return _cached_load(_ensembles, dataset, model_paths(dataset)[1], WinProbEnsemble.load)
 
 
+def get_strength(dataset: str = DEFAULT_DATASET):
+    """The own-data ChampStrength artifact IF the dataset's model was trained
+    with it (meta `champ_strength_source == "own_data_eb"`), else None. The
+    model's meta — not a config flag — decides the feature source, so the serve
+    path can never featurize differently from how the coefficients were fit.
+    Cached by artifact mtime; a missing/unreadable artifact degrades to the
+    machineloling win-rate path (slightly miscalibrated, never broken)."""
+    model = get_model(dataset)
+    if model is None or model.meta.get("champ_strength_source") != "own_data_eb":
+        return None
+    return _cached_load(_strengths, "own_data", default_strength_path(),
+                        ChampStrength.load)
+
+
 def _uncertainty(store: Store, ds: DraftState, rank: str,
                  dataset: str = DEFAULT_DATASET) -> Optional[list]:
     """Per-candidate bootstrap error bars + tie flags for one draft, or None if
@@ -179,8 +196,9 @@ def _uncertainty(store: Store, ds: DraftState, rank: str,
         return None
     un, _ = rank_candidates_uncertain(
         store, ds, ens, rank=rank, point_model=get_model(dataset),
-        tie_threshold=TIE_THRESHOLD)
-    return un
+        tie_threshold=TIE_THRESHOLD, strength=get_strength(dataset),
+        z_cell_c=load_c())  # z-cell noise (WS3): None (off) until the
+    return un               # zcell_noise.json artifact ships / env overrides
 
 
 def _map_roles(team: dict[str, str]) -> dict[str, str]:
@@ -368,7 +386,8 @@ def recommend(state: DraftStateIn):
             wp_results = []
             un_results = None
             if model is not None:  # rank_candidates also hits the store -> same lock
-                wp_results, _ = rank_candidates(store, ds, model, rank=rank)
+                wp_results, _ = rank_candidates(store, ds, model, rank=rank,
+                                                strength=get_strength(dataset))
                 un_results = _uncertainty(store, ds, rank, dataset)  # bootstrap CIs if built
             return _format_picks(results, wp_results, model, state.limit, un_results)
     except FileNotFoundError as e:
@@ -468,7 +487,8 @@ def pick_order(state: PickOrderIn):
                 ds = DraftState(my_role=role, enemies=enemies, allies=allies,
                                 bans=list(state.bans), pool=state.poolFilter)
                 if model is not None:
-                    cands, _ = rank_candidates(store, ds, model, rank=rank)
+                    cands, _ = rank_candidates(store, ds, model, rank=rank,
+                                               strength=get_strength(dataset))
                     if not cands:
                         continue
                     best, tail = cands[0], cands[min(2, len(cands) - 1)]
@@ -624,7 +644,8 @@ def board(state: BoardIn):
                 wp_results = []
                 un_results = None
                 if model is not None:
-                    wp_results, _ = rank_candidates(store, ds, model, rank=rank)
+                    wp_results, _ = rank_candidates(store, ds, model, rank=rank,
+                                                    strength=get_strength(dataset))
                     un_results = _uncertainty(store, ds, rank, dataset)
                 out.append({"role": ui, "picked": None,
                             "picks": _format_picks(results, wp_results, model, state.limit, un_results)})

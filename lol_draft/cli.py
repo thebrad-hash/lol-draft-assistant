@@ -217,11 +217,17 @@ def cmd_recommend(args):
         state = DraftState(my_role, enemies, allies, bans, pool)
 
         model = None
+        strength = None
         if not args.additive:
             try:
                 model = WinProbModel.load(default_model_path())
             except FileNotFoundError:
                 pass
+            if model is not None:
+                # feature source follows the MODEL's meta (own-data vs
+                # machineloling champ_strength) — same coupling the server uses
+                from .champstats import strength_for_meta
+                strength = strength_for_meta(model.meta)
 
         # additive is always computed (fallback when no model, and for --baseline)
         results, warnings = score_draft(store, state, rank=rank, weights=weights,
@@ -230,7 +236,8 @@ def cmd_recommend(args):
         un_results: list = []
         ensemble = None
         if model is not None:
-            wp_results, warnings = rank_candidates(store, state, model, rank=rank)
+            wp_results, warnings = rank_candidates(store, state, model, rank=rank,
+                                                   strength=strength)
             if args.ci:
                 from .model import WinProbEnsemble, default_ensemble_path
                 from .winprob import rank_candidates_uncertain, TIE_THRESHOLD_DEFAULT
@@ -239,10 +246,12 @@ def cmd_recommend(args):
                 except (FileNotFoundError, ValueError):
                     ensemble = None
                 if ensemble is not None:
+                    from .cellnoise import load_c
                     thr = args.tie_threshold if args.tie_threshold is not None else TIE_THRESHOLD_DEFAULT
                     un_results, _ = rank_candidates_uncertain(
                         store, state, ensemble, rank=rank, point_model=model, tie_threshold=thr,
-                        propagate_feature_uncertainty=not args.ci_coef_only)
+                        propagate_feature_uncertainty=not args.ci_coef_only,
+                        strength=strength, z_cell_c=load_c())
 
     # header
     agg = args.agg or settings.get("agg", config.DEFAULT_AGG)
@@ -321,6 +330,14 @@ def cmd_evaluate(args):
         print(f"    - {s}")
 
 
+def cmd_snapshot_audit(args):
+    # lazy: the audit decodes matrices (numpy); keep the read-only CLI path lean
+    from .snapshot import TOP_MOVERS, WARN_CORRELATION, run_audit_cli
+    warn = args.warn_corr if args.warn_corr is not None else WARN_CORRELATION
+    top = args.top if args.top is not None else TOP_MOVERS
+    sys.exit(run_audit_cli(args.a, args.b, warn_corr=warn, top=top))
+
+
 # --- argument parsing ------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -386,6 +403,19 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Team B pick (repeatable)")
     pe.add_argument("--rank", choices=config.RANKS)
     pe.set_defaults(func=cmd_evaluate)
+
+    ps = sub.add_parser("snapshot-audit",
+                        help="compare two archived machineloling snapshots: "
+                             "z-matrix stability + per-champion break scores")
+    ps.add_argument("--a", help="older snapshot (dir name under data/snapshots/ "
+                                "or a path); default: second-newest")
+    ps.add_argument("--b", help="newer snapshot; default: newest")
+    ps.add_argument("--warn-corr", type=float, default=None, dest="warn_corr",
+                    help="warn when a role-pair z-matrix correlates below this "
+                         "(default 0.90). The audit only ever warns — it never blocks")
+    ps.add_argument("--top", type=int, default=None,
+                    help="how many per-champion movers to report (default 15)")
+    ps.set_defaults(func=cmd_snapshot_audit)
 
     return p
 

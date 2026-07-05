@@ -1,0 +1,1389 @@
+[
+ {
+  "id": "state_00",
+  "phase": "early",
+  "source_match": "NA1_5566477356",
+  "patch": "16.10",
+  "my_role": "ADC",
+  "allies": {
+   "MID": "Orianna"
+  },
+  "enemies": {
+   "ADC": "Senna",
+   "SUP": "Alistar"
+  },
+  "bans": [
+   "Illaoi",
+   "Naafiri",
+   "Ahri",
+   "Sivir",
+   "Rakan",
+   "Trundle"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_01",
+  "phase": "mid",
+  "source_match": "NA1_5556623435",
+  "patch": "16.9",
+  "my_role": "SUP",
+  "allies": {
+   "JUNGLE": "Shyvana",
+   "MID": "Yasuo",
+   "TOP": "Vayne"
+  },
+  "enemies": {
+   "ADC": "Ashe",
+   "SUP": "Zyra",
+   "TOP": "Riven"
+  },
+  "bans": [
+   "Fiora",
+   "Skarner",
+   "Xerath",
+   "Jinx",
+   "TahmKench",
+   "Renekton"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_02",
+  "phase": "mid",
+  "source_match": "NA1_5559351238",
+  "patch": "16.9",
+  "my_role": "JUNGLE",
+  "allies": {
+   "ADC": "Ashe",
+   "SUP": "Sona",
+   "TOP": "Darius"
+  },
+  "enemies": {
+   "ADC": "Caitlyn",
+   "MID": "Galio",
+   "TOP": "Poppy"
+  },
+  "bans": [
+   "Nasus",
+   "Ambessa",
+   "Taliyah",
+   "Braum",
+   "Camille",
+   "Morgana"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_03",
+  "phase": "last",
+  "source_match": "NA1_5550213216",
+  "patch": "16.9",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Jinx",
+   "JUNGLE": "Zaahen",
+   "SUP": "Zyra",
+   "TOP": "Rumble"
+  },
+  "enemies": {
+   "TOP": "Khazix",
+   "JUNGLE": "RekSai",
+   "MID": "Brand",
+   "ADC": "Varus",
+   "SUP": "Nami"
+  },
+  "bans": [
+   "KSante",
+   "Nunu",
+   "Mel",
+   "Caitlyn",
+   "Morgana",
+   "Garen"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_04",
+  "phase": "early",
+  "source_match": "NA1_5515202259",
+  "patch": "16.6",
+  "my_role": "JUNGLE",
+  "allies": {
+   "MID": "Mel"
+  },
+  "enemies": {
+   "MID": "Ahri",
+   "SUP": "Nami"
+  },
+  "bans": [
+   "Mordekaiser",
+   "Shyvana",
+   "Lucian",
+   "Blitzcrank",
+   "Smolder",
+   "Wukong"
+  ],
+  "pool": [
+   "Chogath",
+   "Ekko",
+   "FiddleSticks",
+   "Graves",
+   "Rengar",
+   "Rumble",
+   "Trundle",
+   "Volibear"
+  ]
+ },
+ {
+  "id": "state_05",
+  "phase": "mid",
+  "source_match": "NA1_5546120853",
+  "patch": "16.8",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Ezreal",
+   "JUNGLE": "XinZhao",
+   "MID": "Katarina"
+  },
+  "enemies": {
+   "ADC": "Yasuo",
+   "JUNGLE": "Evelynn",
+   "TOP": "Aatrox"
+  },
+  "bans": [
+   "Garen",
+   "Taliyah",
+   "Draven",
+   "Ryze",
+   "Volibear",
+   "Syndra"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_06",
+  "phase": "mid",
+  "source_match": "NA1_5569243686",
+  "patch": "16.10",
+  "my_role": "ADC",
+  "allies": {
+   "JUNGLE": "Ambessa",
+   "SUP": "Rakan",
+   "TOP": "Ashe"
+  },
+  "enemies": {
+   "JUNGLE": "Graves",
+   "MID": "Lux",
+   "TOP": "Sion"
+  },
+  "bans": [
+   "Vayne",
+   "Elise",
+   "Ahri",
+   "Singed",
+   "FiddleSticks",
+   "Akali"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_07",
+  "phase": "last",
+  "source_match": "NA1_5538699050",
+  "patch": "16.7",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Ezreal",
+   "JUNGLE": "JarvanIV",
+   "SUP": "Nami",
+   "TOP": "Jayce"
+  },
+  "enemies": {
+   "TOP": "Fiora",
+   "JUNGLE": "FiddleSticks",
+   "MID": "Aatrox",
+   "ADC": "Senna",
+   "SUP": "Sona"
+  },
+  "bans": [
+   "KSante",
+   "MasterYi",
+   "Zoe",
+   "Thresh",
+   "Pantheon",
+   "Viego"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_08",
+  "phase": "early",
+  "source_match": "NA1_5557561979",
+  "patch": "16.9",
+  "my_role": "TOP",
+  "allies": {
+   "JUNGLE": "LeeSin"
+  },
+  "enemies": {
+   "JUNGLE": "Fizz",
+   "SUP": "Alistar"
+  },
+  "bans": [
+   "Riven",
+   "Kayn",
+   "Nasus",
+   "Xerath",
+   "Pyke",
+   "Irelia"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_09",
+  "phase": "mid",
+  "source_match": "NA1_5524150609",
+  "patch": "16.6",
+  "my_role": "JUNGLE",
+  "allies": {
+   "MID": "Fizz",
+   "SUP": "Lulu",
+   "TOP": "Fiora"
+  },
+  "enemies": {
+   "ADC": "Mel",
+   "JUNGLE": "Maokai",
+   "TOP": "Riven"
+  },
+  "bans": [
+   "Renekton",
+   "Lillia",
+   "Zed",
+   "Rell",
+   "Chogath",
+   "LeeSin"
+  ],
+  "pool": [
+   "Ambessa",
+   "Gragas",
+   "Hecarim",
+   "Mordekaiser",
+   "Nasus",
+   "Rengar",
+   "Shaco",
+   "Shen"
+  ]
+ },
+ {
+  "id": "state_10",
+  "phase": "mid",
+  "source_match": "NA1_5549745239",
+  "patch": "16.8",
+  "my_role": "ADC",
+  "allies": {
+   "MID": "Sion",
+   "SUP": "Pantheon",
+   "TOP": "Yorick"
+  },
+  "enemies": {
+   "ADC": "Jhin",
+   "SUP": "Mel",
+   "TOP": "Ambessa"
+  },
+  "bans": [
+   "Jax",
+   "Kayn",
+   "Syndra",
+   "Karthus",
+   "Senna",
+   "Renekton"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_11",
+  "phase": "last",
+  "source_match": "NA1_5565195741",
+  "patch": "16.10",
+  "my_role": "ADC",
+  "allies": {
+   "JUNGLE": "Vi",
+   "MID": "Zoe",
+   "SUP": "Rumble",
+   "TOP": "Darius"
+  },
+  "enemies": {
+   "TOP": "Malphite",
+   "JUNGLE": "Kindred",
+   "MID": "TwistedFate",
+   "ADC": "Kalista",
+   "SUP": "Leona"
+  },
+  "bans": [
+   "Qiyana",
+   "Warwick",
+   "Corki",
+   "Sona",
+   "Garen",
+   "Volibear"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_12",
+  "phase": "early",
+  "source_match": "NA1_5539974183",
+  "patch": "16.7",
+  "my_role": "ADC",
+  "allies": {
+   "SUP": "Rell"
+  },
+  "enemies": {
+   "MID": "Qiyana",
+   "SUP": "Hwei"
+  },
+  "bans": [
+   "Vayne",
+   "Zaahen",
+   "Ahri",
+   "Draven",
+   "Leona",
+   "Ezreal"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_13",
+  "phase": "mid",
+  "source_match": "NA1_5554070357",
+  "patch": "16.9",
+  "my_role": "MID",
+  "allies": {
+   "JUNGLE": "Nocturne",
+   "SUP": "Thresh",
+   "TOP": "Heimerdinger"
+  },
+  "enemies": {
+   "ADC": "Tristana",
+   "JUNGLE": "Graves",
+   "MID": "Brand"
+  },
+  "bans": [
+   "Ornn",
+   "Diana",
+   "Caitlyn",
+   "Karma",
+   "Kled",
+   "Ambessa"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_14",
+  "phase": "mid",
+  "source_match": "NA1_5583600173",
+  "patch": "16.12",
+  "my_role": "JUNGLE",
+  "allies": {
+   "ADC": "Viktor",
+   "MID": "Lissandra",
+   "TOP": "Sett"
+  },
+  "enemies": {
+   "MID": "Yone",
+   "SUP": "Sona",
+   "TOP": "Olaf"
+  },
+  "bans": [
+   "Singed",
+   "Rengar",
+   "Sejuani",
+   "Sivir",
+   "Nunu",
+   "Vladimir"
+  ],
+  "pool": [
+   "Amumu",
+   "Ekko",
+   "JarvanIV",
+   "Kayn",
+   "Pantheon",
+   "Taliyah",
+   "Volibear",
+   "Zaahen"
+  ]
+ },
+ {
+  "id": "state_15",
+  "phase": "last",
+  "source_match": "NA1_5584029446",
+  "patch": "16.12",
+  "my_role": "TOP",
+  "allies": {
+   "ADC": "Jinx",
+   "JUNGLE": "LeeSin",
+   "MID": "Ezreal",
+   "SUP": "Thresh"
+  },
+  "enemies": {
+   "TOP": "Vex",
+   "JUNGLE": "JarvanIV",
+   "MID": "Ahri",
+   "ADC": "Caitlyn",
+   "SUP": "Seraphine"
+  },
+  "bans": [
+   "Sion",
+   "Fizz",
+   "RekSai",
+   "Kaisa",
+   "Nami",
+   "Gwen"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_16",
+  "phase": "early",
+  "source_match": "NA1_5545509666",
+  "patch": "16.8",
+  "my_role": "MID",
+  "allies": {
+   "JUNGLE": "Naafiri"
+  },
+  "enemies": {
+   "JUNGLE": "Vi",
+   "SUP": "Sion"
+  },
+  "bans": [
+   "Camille",
+   "Ekko",
+   "Ahri",
+   "Ashe",
+   "Braum",
+   "Malphite"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_17",
+  "phase": "mid",
+  "source_match": "NA1_5578623646",
+  "patch": "16.11",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "MissFortune",
+   "MID": "Hwei",
+   "TOP": "Sett"
+  },
+  "enemies": {
+   "ADC": "Samira",
+   "MID": "Ahri",
+   "TOP": "Warwick"
+  },
+  "bans": [
+   "Darius",
+   "Gwen",
+   "Yone",
+   "Senna",
+   "Sona",
+   "Gnar"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_18",
+  "phase": "mid",
+  "source_match": "NA1_5568818454",
+  "patch": "16.10",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Tristana",
+   "JUNGLE": "Diana",
+   "MID": "Akali"
+  },
+  "enemies": {
+   "JUNGLE": "Shyvana",
+   "MID": "Ryze",
+   "SUP": "Alistar"
+  },
+  "bans": [
+   "Trundle",
+   "JarvanIV",
+   "Vex",
+   "Caitlyn",
+   "Zilean",
+   "Garen"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_19",
+  "phase": "last",
+  "source_match": "NA1_5586796416",
+  "patch": "16.12",
+  "my_role": "JUNGLE",
+  "allies": {
+   "ADC": "Xayah",
+   "MID": "Yasuo",
+   "SUP": "Zilean",
+   "TOP": "Akali"
+  },
+  "enemies": {
+   "TOP": "Sett",
+   "JUNGLE": "Diana",
+   "MID": "Garen",
+   "ADC": "Jinx",
+   "SUP": "Soraka"
+  },
+  "bans": [
+   "Swain",
+   "Ivern",
+   "Jayce",
+   "Caitlyn",
+   "Shen",
+   "Lillia"
+  ],
+  "pool": [
+   "DrMundo",
+   "JarvanIV",
+   "Jax",
+   "LeeSin",
+   "Skarner",
+   "Viego",
+   "Volibear",
+   "Wukong"
+  ]
+ },
+ {
+  "id": "state_20",
+  "phase": "early",
+  "source_match": "NA1_5578858448",
+  "patch": "16.12",
+  "my_role": "SUP",
+  "allies": {
+   "TOP": "Garen"
+  },
+  "enemies": {
+   "MID": "Vladimir",
+   "SUP": "Yuumi"
+  },
+  "bans": [
+   "Darius",
+   "XinZhao",
+   "Malzahar",
+   "Caitlyn",
+   "TahmKench",
+   "Tryndamere"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_21",
+  "phase": "mid",
+  "source_match": "NA1_5565970402",
+  "patch": "16.10",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Samira",
+   "SUP": "Nami",
+   "TOP": "Shen"
+  },
+  "enemies": {
+   "ADC": "Vladimir",
+   "SUP": "Soraka",
+   "TOP": "Camille"
+  },
+  "bans": [
+   "Ambessa",
+   "Ivern",
+   "Viktor",
+   "Jhin",
+   "Nautilus",
+   "Cassiopeia"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_22",
+  "phase": "mid",
+  "source_match": "NA1_5590261986",
+  "patch": "16.13",
+  "my_role": "JUNGLE",
+  "allies": {
+   "MID": "Veigar",
+   "SUP": "Nautilus",
+   "TOP": "Singed"
+  },
+  "enemies": {
+   "ADC": "Tristana",
+   "JUNGLE": "Olaf",
+   "SUP": "Blitzcrank"
+  },
+  "bans": [
+   "Malphite",
+   "Aatrox",
+   "Zilean",
+   "Ziggs",
+   "Lux",
+   "DrMundo"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_23",
+  "phase": "last",
+  "source_match": "NA1_5595106959",
+  "patch": "16.13",
+  "my_role": "TOP",
+  "allies": {
+   "ADC": "Caitlyn",
+   "JUNGLE": "Udyr",
+   "MID": "Hwei",
+   "SUP": "Nami"
+  },
+  "enemies": {
+   "TOP": "Gnar",
+   "JUNGLE": "Kindred",
+   "MID": "Ahri",
+   "ADC": "Ashe",
+   "SUP": "Maokai"
+  },
+  "bans": [
+   "Malphite",
+   "Graves",
+   "XinZhao",
+   "Yasuo",
+   "Pantheon",
+   "Yone"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_24",
+  "phase": "early",
+  "source_match": "NA1_5514368810",
+  "patch": "16.5",
+  "my_role": "MID",
+  "allies": {
+   "TOP": "Ornn"
+  },
+  "enemies": {
+   "ADC": "Twitch",
+   "JUNGLE": "Udyr"
+  },
+  "bans": [
+   "Ahri",
+   "Nunu",
+   "Sylas",
+   "Kalista",
+   "Sion",
+   "Graves"
+  ],
+  "pool": [
+   "Brand",
+   "Ezreal",
+   "Heimerdinger",
+   "Kennen",
+   "Leblanc",
+   "Quinn",
+   "Yone",
+   "Zed"
+  ]
+ },
+ {
+  "id": "state_25",
+  "phase": "mid",
+  "source_match": "NA1_5542093221",
+  "patch": "16.8",
+  "my_role": "ADC",
+  "allies": {
+   "MID": "Ekko",
+   "SUP": "Senna",
+   "TOP": "Jayce"
+  },
+  "enemies": {
+   "ADC": "Caitlyn",
+   "SUP": "Sona",
+   "TOP": "Olaf"
+  },
+  "bans": [
+   "Vayne",
+   "LeeSin",
+   "Syndra",
+   "Seraphine",
+   "Teemo",
+   "XinZhao"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_26",
+  "phase": "mid",
+  "source_match": "NA1_5593022302",
+  "patch": "16.13",
+  "my_role": "ADC",
+  "allies": {
+   "MID": "Yone",
+   "SUP": "Blitzcrank",
+   "TOP": "Zoe"
+  },
+  "enemies": {
+   "ADC": "Varus",
+   "SUP": "Nautilus",
+   "TOP": "Quinn"
+  },
+  "bans": [
+   "Aatrox",
+   "Nunu",
+   "Akali",
+   "Pyke",
+   "Senna",
+   "Gangplank"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_27",
+  "phase": "last",
+  "source_match": "NA1_5574762866",
+  "patch": "16.11",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Kaisa",
+   "JUNGLE": "Diana",
+   "MID": "Lux",
+   "TOP": "Quinn"
+  },
+  "enemies": {
+   "TOP": "Alistar",
+   "JUNGLE": "Warwick",
+   "MID": "Akshan",
+   "ADC": "Vayne",
+   "SUP": "Poppy"
+  },
+  "bans": [
+   "Malphite",
+   "Naafiri",
+   "Ahri",
+   "Aphelios",
+   "Lulu",
+   "Aurora"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_28",
+  "phase": "early",
+  "source_match": "NA1_5568484091",
+  "patch": "16.10",
+  "my_role": "TOP",
+  "allies": {
+   "SUP": "Thresh"
+  },
+  "enemies": {
+   "SUP": "Nami",
+   "TOP": "JarvanIV"
+  },
+  "bans": [
+   "Pantheon",
+   "Ambessa",
+   "Ahri",
+   "Ashe",
+   "Tryndamere",
+   "Graves"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_29",
+  "phase": "mid",
+  "source_match": "NA1_5563419178",
+  "patch": "16.10",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Ezreal",
+   "JUNGLE": "Belveth",
+   "SUP": "Janna"
+  },
+  "enemies": {
+   "ADC": "Varus",
+   "MID": "Akshan",
+   "TOP": "Darius"
+  },
+  "bans": [
+   "Kayle",
+   "Olaf",
+   "Ahri",
+   "Jhin",
+   "Malphite",
+   "Volibear"
+  ],
+  "pool": [
+   "Annie",
+   "Fizz",
+   "Galio",
+   "Jayce",
+   "Lux",
+   "Pantheon",
+   "Smolder",
+   "Vladimir"
+  ]
+ },
+ {
+  "id": "state_30",
+  "phase": "mid",
+  "source_match": "NA1_5584859609",
+  "patch": "16.12",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Seraphine",
+   "JUNGLE": "Rengar",
+   "SUP": "Rell"
+  },
+  "enemies": {
+   "ADC": "Ashe",
+   "JUNGLE": "Sylas",
+   "MID": "Velkoz"
+  },
+  "bans": [
+   "Naafiri",
+   "RekSai",
+   "Akali",
+   "AurelionSol",
+   "Nami",
+   "KSante"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_31",
+  "phase": "last",
+  "source_match": "NA1_5564021674",
+  "patch": "16.10",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Zeri",
+   "JUNGLE": "Graves",
+   "MID": "Ziggs",
+   "TOP": "Yorick"
+  },
+  "enemies": {
+   "TOP": "Jayce",
+   "JUNGLE": "Khazix",
+   "MID": "Katarina",
+   "ADC": "Lux",
+   "SUP": "Senna"
+  },
+  "bans": [
+   "Shaco",
+   "Kassadin",
+   "Jhin",
+   "Bard",
+   "Malphite",
+   "Zed"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_32",
+  "phase": "early",
+  "source_match": "NA1_5587837808",
+  "patch": "16.12",
+  "my_role": "ADC",
+  "allies": {
+   "TOP": "Garen"
+  },
+  "enemies": {
+   "ADC": "Brand",
+   "MID": "Zed"
+  },
+  "bans": [
+   "Shen",
+   "Warwick",
+   "Viktor",
+   "Lucian",
+   "Milio",
+   "Singed"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_33",
+  "phase": "mid",
+  "source_match": "NA1_5561123248",
+  "patch": "16.10",
+  "my_role": "JUNGLE",
+  "allies": {
+   "ADC": "Ashe",
+   "MID": "Sylas",
+   "TOP": "Mordekaiser"
+  },
+  "enemies": {
+   "ADC": "Jinx",
+   "MID": "Syndra",
+   "SUP": "Lulu"
+  },
+  "bans": [
+   "Sion",
+   "Quinn",
+   "Lux",
+   "Caitlyn",
+   "Zilean",
+   "Singed"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_34",
+  "phase": "mid",
+  "source_match": "NA1_5592513095",
+  "patch": "16.13",
+  "my_role": "TOP",
+  "allies": {
+   "ADC": "Senna",
+   "MID": "Kassadin",
+   "SUP": "Ivern"
+  },
+  "enemies": {
+   "JUNGLE": "Nocturne",
+   "MID": "Naafiri",
+   "SUP": "Thresh"
+  },
+  "bans": [
+   "Sion",
+   "Graves",
+   "Qiyana",
+   "MissFortune",
+   "Gragas",
+   "Camille"
+  ],
+  "pool": [
+   "Briar",
+   "Jax",
+   "Ryze",
+   "Shen",
+   "Singed",
+   "Smolder",
+   "Tryndamere",
+   "Urgot"
+  ]
+ },
+ {
+  "id": "state_35",
+  "phase": "last",
+  "source_match": "NA1_5525922841",
+  "patch": "16.6",
+  "my_role": "ADC",
+  "allies": {
+   "JUNGLE": "Viego",
+   "MID": "TwistedFate",
+   "SUP": "Soraka",
+   "TOP": "Kennen"
+  },
+  "enemies": {
+   "TOP": "Kayle",
+   "JUNGLE": "Shyvana",
+   "MID": "Lux",
+   "ADC": "Yunara",
+   "SUP": "Morgana"
+  },
+  "bans": [
+   "Garen",
+   "Skarner",
+   "Katarina",
+   "Senna",
+   "XinZhao",
+   "Kindred"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_36",
+  "phase": "early",
+  "source_match": "NA1_5585064206",
+  "patch": "16.12",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Draven"
+  },
+  "enemies": {
+   "ADC": "Kaisa",
+   "JUNGLE": "Nocturne"
+  },
+  "bans": [
+   "Aatrox",
+   "AurelionSol",
+   "Jinx",
+   "Janna",
+   "Singed",
+   "Hecarim"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_37",
+  "phase": "mid",
+  "source_match": "NA1_5568717174",
+  "patch": "16.10",
+  "my_role": "TOP",
+  "allies": {
+   "JUNGLE": "Nocturne",
+   "MID": "Riven",
+   "SUP": "Karma"
+  },
+  "enemies": {
+   "ADC": "Lucian",
+   "MID": "XinZhao",
+   "SUP": "Braum"
+  },
+  "bans": [
+   "Vladimir",
+   "Graves",
+   "Naafiri",
+   "Smolder",
+   "Pyke",
+   "MasterYi"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_38",
+  "phase": "mid",
+  "source_match": "NA1_5593476466",
+  "patch": "16.13",
+  "my_role": "TOP",
+  "allies": {
+   "JUNGLE": "Rengar",
+   "MID": "Ahri",
+   "SUP": "Zilean"
+  },
+  "enemies": {
+   "ADC": "Ezreal",
+   "SUP": "Senna",
+   "TOP": "TahmKench"
+  },
+  "bans": [
+   "Jayce",
+   "Karthus",
+   "Yone",
+   "Sivir",
+   "Yuumi",
+   "Yorick"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_39",
+  "phase": "last",
+  "source_match": "NA1_5550159001",
+  "patch": "16.9",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Ezreal",
+   "JUNGLE": "Karthus",
+   "MID": "Yasuo",
+   "TOP": "Vayne"
+  },
+  "enemies": {
+   "TOP": "Jayce",
+   "JUNGLE": "Sylas",
+   "MID": "Akali",
+   "ADC": "Smolder",
+   "SUP": "Velkoz"
+  },
+  "bans": [
+   "Urgot",
+   "Nasus",
+   "Lux",
+   "Nami",
+   "Malphite",
+   "Evelynn"
+  ],
+  "pool": [
+   "Ashe",
+   "Bard",
+   "Elise",
+   "Leona",
+   "Rakan",
+   "Swain",
+   "Xerath",
+   "Yuumi"
+  ]
+ },
+ {
+  "id": "state_40",
+  "phase": "early",
+  "source_match": "NA1_5502350832",
+  "patch": "16.4",
+  "my_role": "JUNGLE",
+  "allies": {
+   "SUP": "Leona"
+  },
+  "enemies": {
+   "MID": "Zed",
+   "SUP": "Sona"
+  },
+  "bans": [
+   "Zaahen",
+   "Nunu",
+   "Sylas",
+   "Vayne",
+   "Lulu",
+   "Gragas"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_41",
+  "phase": "mid",
+  "source_match": "NA1_5484441519",
+  "patch": "16.3",
+  "my_role": "ADC",
+  "allies": {
+   "MID": "Taliyah",
+   "SUP": "Pyke",
+   "TOP": "Malphite"
+  },
+  "enemies": {
+   "JUNGLE": "Hecarim",
+   "SUP": "Rell",
+   "TOP": "Ryze"
+  },
+  "bans": [
+   "Shen",
+   "Darius",
+   "Gangplank",
+   "Draven",
+   "Nami",
+   "Rengar"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_42",
+  "phase": "mid",
+  "source_match": "NA1_5547625736",
+  "patch": "16.8",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Caitlyn",
+   "JUNGLE": "Nunu",
+   "TOP": "KSante"
+  },
+  "enemies": {
+   "ADC": "Xayah",
+   "MID": "Viktor",
+   "SUP": "Nami"
+  },
+  "bans": [
+   "Ornn",
+   "Evelynn",
+   "Zeri",
+   "Bard",
+   "Irelia",
+   "Kindred"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_43",
+  "phase": "last",
+  "source_match": "NA1_5575765865",
+  "patch": "16.11",
+  "my_role": "ADC",
+  "allies": {
+   "JUNGLE": "Qiyana",
+   "MID": "Riven",
+   "SUP": "Milio",
+   "TOP": "Malphite"
+  },
+  "enemies": {
+   "TOP": "DrMundo",
+   "JUNGLE": "Kindred",
+   "MID": "Rumble",
+   "ADC": "Jhin",
+   "SUP": "Senna"
+  },
+  "bans": [
+   "XinZhao",
+   "Rammus",
+   "Vladimir",
+   "Jinx",
+   "Rakan",
+   "Yone"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_44",
+  "phase": "early",
+  "source_match": "NA1_5545180928",
+  "patch": "16.8",
+  "my_role": "SUP",
+  "allies": {
+   "MID": "Zoe"
+  },
+  "enemies": {
+   "JUNGLE": "Qiyana",
+   "MID": "Fizz"
+  },
+  "bans": [
+   "Ivern",
+   "JarvanIV",
+   "Viktor",
+   "Seraphine",
+   "MasterYi",
+   "Morgana"
+  ],
+  "pool": [
+   "Amumu",
+   "Ashe",
+   "FiddleSticks",
+   "Leona",
+   "Maokai",
+   "Shen",
+   "Swain",
+   "Zac"
+  ]
+ },
+ {
+  "id": "state_45",
+  "phase": "mid",
+  "source_match": "NA1_5549990898",
+  "patch": "16.9",
+  "my_role": "JUNGLE",
+  "allies": {
+   "MID": "Qiyana",
+   "SUP": "Zoe",
+   "TOP": "DrMundo"
+  },
+  "enemies": {
+   "ADC": "Twitch",
+   "JUNGLE": "Naafiri",
+   "TOP": "Rumble"
+  },
+  "bans": [
+   "Jayce",
+   "JarvanIV",
+   "Mel",
+   "Draven",
+   "Nautilus",
+   "Gwen"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_46",
+  "phase": "mid",
+  "source_match": "NA1_5544062024",
+  "patch": "16.8",
+  "my_role": "MID",
+  "allies": {
+   "ADC": "Kaisa",
+   "JUNGLE": "Kindred",
+   "TOP": "Fiora"
+  },
+  "enemies": {
+   "ADC": "Smolder",
+   "JUNGLE": "Diana",
+   "MID": "Irelia"
+  },
+  "bans": [
+   "Riven",
+   "Shaco",
+   "Ziggs",
+   "Caitlyn",
+   "Milio",
+   "TahmKench"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_47",
+  "phase": "last",
+  "source_match": "NA1_5587752328",
+  "patch": "16.12",
+  "my_role": "SUP",
+  "allies": {
+   "ADC": "Sivir",
+   "JUNGLE": "Udyr",
+   "MID": "Irelia",
+   "TOP": "Kassadin"
+  },
+  "enemies": {
+   "TOP": "Akshan",
+   "JUNGLE": "Fizz",
+   "MID": "Syndra",
+   "ADC": "Seraphine",
+   "SUP": "Taric"
+  },
+  "bans": [
+   "Shen",
+   "Sejuani",
+   "Yone",
+   "Jhin",
+   "Olaf",
+   "Rengar"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_48",
+  "phase": "early",
+  "source_match": "NA1_5571522354",
+  "patch": "16.11",
+  "my_role": "ADC",
+  "allies": {
+   "TOP": "Irelia"
+  },
+  "enemies": {
+   "JUNGLE": "MasterYi",
+   "SUP": "Seraphine"
+  },
+  "bans": [
+   "Zac",
+   "Zed",
+   "Jhin",
+   "Alistar",
+   "Zaahen",
+   "Viego"
+  ],
+  "pool": null
+ },
+ {
+  "id": "state_49",
+  "phase": "mid",
+  "source_match": "NA1_5585133389",
+  "patch": "16.12",
+  "my_role": "JUNGLE",
+  "allies": {
+   "ADC": "Tristana",
+   "MID": "Sylas",
+   "TOP": "Yorick"
+  },
+  "enemies": {
+   "ADC": "Lucian",
+   "SUP": "Alistar",
+   "TOP": "Gangplank"
+  },
+  "bans": [
+   "Amumu",
+   "Irelia",
+   "Ashe",
+   "Seraphine",
+   "Sejuani",
+   "Viego"
+  ],
+  "pool": [
+   "Chogath",
+   "Graves",
+   "Kindred",
+   "Nidalee",
+   "RekSai",
+   "Talon",
+   "Teemo",
+   "Vi"
+  ]
+ }
+]

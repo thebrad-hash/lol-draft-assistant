@@ -29,6 +29,11 @@ from pathlib import Path
 
 import numpy as np
 
+# Bump when the decoding math changes (layout, z derivation). Recorded in every
+# snapshot manifest so a cross-snapshot audit knows whether the two sides were
+# decoded the same way.
+DECODER_VERSION = 1
+
 
 @dataclass
 class Block:

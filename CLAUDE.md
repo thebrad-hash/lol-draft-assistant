@@ -59,6 +59,10 @@ web/                  React 18 + Vite + TS frontend
 data/
   raw/                source data (matrices.bin, index.json, champions.json,
                       blindability.json) + .meta.json fetch sidecars
+  snapshots/          patch-stamped archives of raw/ (one dir per fetched
+                      snapshot + manifest.json; committed — NOT rebuildable)
+  reports/            snapshot-audit + benchmark output (regenerable; gitignored)
+  benchmarks/         fixed pick-interval benchmark states (committed)
   draft.db            built SQLite store (rebuildable; gitignored)
 tests/smoke_test.py   end-to-end parity + scoring smoke test (no pytest)
 draft.bat / serve.bat Windows launchers (see Environment caveat below)
@@ -96,6 +100,36 @@ Run module-form commands from the **repo root** with a Python that has `numpy`
 python -m lol_draft.cli build            # download (if needed) + (re)build data/draft.db
 python -m lol_draft.cli build --force    # also re-download source data
 python -m lol_draft.cli info             # provenance, weights, settings
+
+# Snapshot archive + stationarity audit (WS1). Every build archives the raw
+# source files under data/snapshots/<patch>_<date>/ (patch = Riot's live patch
+# at fetch time; content-hashed, so unchanged data is skipped). The audit
+# compares two snapshots' matchup/synergy z matrices — it WARNS (correlation
+# < 0.90, top per-champion movers), it never blocks anything.
+python -m lol_draft.cli snapshot-audit             # newest vs previous snapshot
+python -m lol_draft.cli snapshot-audit --a unknown_2026-05-29 --b 16.14_2026-07-10
+python -m lol_draft.snapshot --selftest            # offline synthetic-fixture test
+
+# Own-data champ_strength (WS2; currently NOT promoted — gate failed, see
+# STATUS.md). Builds the per-champion, per-patch EB random-walk posterior from
+# the collected games; train/bootstrap consume it only with --champ-strength
+# own_data, and scoring paths follow the MODEL's meta (champ_strength_source),
+# so nothing changes at serve time unless an own-data model is promoted.
+python -m lol_draft.champstats build               # -> data/models/champ_strength.json
+python -m lol_draft.champstats --selftest
+python -m lol_draft.train --patch all --champ-strength own_data --out <candidate.json>
+python -m lol_draft.bootstrap --patch all --champ-strength own_data --out <candidate_bootstrap.json>
+
+# z-cell noise (WS3). Fits the global constant c for the matchup/synergy
+# z-cell uncertainty (EB posterior: v = s²/(s²+1), s² = c/N̂) and writes
+# data/models/zcell_noise.json — the serve path samples z cells in the
+# uncertainty ensemble ONLY while that artifact exists (env overrides:
+# WINPROB_ZCELL=off, WINPROB_ZCELL_C=<float>). With >=2 archived snapshots the
+# fit is snapshot-calibrated; otherwise a documented heuristic fallback.
+python -m lol_draft.cellnoise fit                  # calibrate + persist c
+python -m lol_draft.cellnoise --selftest
+python -m lol_draft.benchmark                      # interval width + tie-rate report,
+python -m lol_draft.benchmark regen                #   OFF vs ON (fixed 50-state file)
 
 # Recommend (role is required; -e enemy, -a ally, -b ban; all repeatable)
 python -m lol_draft.cli recommend -r TOP -e MID=Ahri -e JUNGLE=LeeSin \

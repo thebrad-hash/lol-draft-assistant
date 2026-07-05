@@ -1,0 +1,18 @@
+{
+  "c": 17.95836320027863,
+  "method": "fallback_default",
+  "n_hat_median": 107.48397211290947,
+  "n_hat_p10": 12.001893956592516,
+  "n_cells": 103684,
+  "n_cells_zero_n_hat": 1284,
+  "implied_s": {
+    "median_n_cell": 0.40875353500642264,
+    "p10_n_cell": 1.2232310113040212
+  },
+  "anchors": {
+    "s_median_target": 0.5,
+    "s_p10_target": 1.0
+  },
+  "rank": "diamond",
+  "built_at": "2026-07-05T13:57:37.520149+00:00"
+}

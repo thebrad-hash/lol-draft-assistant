@@ -61,6 +61,13 @@ def build_db(db_path: Path | None = None, raw_dir: Path | None = None,
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     paths = fetch.fetch_all(force=force_fetch, raw_dir=raw_dir)
+
+    # Archive the fetched source files as a patch-stamped snapshot (WS1).
+    # Idempotent (content-hashed) and non-fatal — a failed archive never blocks
+    # the build; it's provenance for the stationarity audit, not a build input.
+    from .snapshot import archive_snapshot
+    archive_snapshot(raw_dir)
+
     index = decode.load_index(paths["index.json"])
     buf = decode.load_matrices(paths["matrices.bin"])
     playrates = decode.load_playrates(paths["champions.json"])
@@ -249,6 +256,18 @@ class Store:
         if row is None or row["win_rate"] is None:
             return None
         return float(row["win_rate"]), int(row["games"] or 0)
+
+    def role_games(self, rank: str, role: str) -> int:
+        """Total recorded games across a role's champions at this rank — the G
+        in WS3's per-cell sample-size proxy N̂ ≈ G · PR_A · PR_B. (Every game
+        fills every role, so per-role totals all approximate the bracket's
+        game count; they differ only by playrate table trimming, within ~3%.)"""
+        cur = self.con.execute(
+            "SELECT SUM(games) AS g FROM playrates WHERE rank=? AND role=?",
+            (rank, role),
+        )
+        row = cur.fetchone()
+        return int(row["g"] or 0)
 
     def win_rates(self, rank: str, role: str) -> dict[str, float]:
         cur = self.con.execute(

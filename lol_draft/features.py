@@ -68,14 +68,24 @@ class DraftFeatures:
     values: dict[str, float]                 # name -> value (FEATURE_NAMES)
     coverage: dict[str, int] = field(default_factory=dict)   # pairings actually used
     complete: bool = True                    # all 10 slots filled & every cell found
+    # Populated only when draft_features(collect_cells=True): per z-feature, the
+    # exact store cells its value was summed from, as (mode, role_a, role_b,
+    # champ_a, champ_b, sign) — sign is -1.0 for enemy synergy pairs. WS3's
+    # uncertainty path perturbs these cells; keeping the identities here (rather
+    # than re-deriving them elsewhere) preserves the single-source-of-truth
+    # guarantee: a cell is perturbed iff it contributed to the feature.
+    cells: dict[str, list[tuple]] | None = None
 
     def vector(self) -> list[float]:
         return [self.values[k] for k in FEATURE_NAMES]
 
 
-def _team_synergy(store: Store, team: dict[str, str]) -> tuple[float, int]:
+def _team_synergy(store: Store, team: dict[str, str], cells_out: list | None = None,
+                  sign: float = 1.0) -> tuple[float, int]:
     """(sum of intra-team synergy z over known pairs, n pairs). Mirrors
-    evaluate.py; returned as a sum so the caller divides by the full pair count."""
+    evaluate.py; returned as a sum so the caller divides by the full pair count.
+    When `cells_out` is given, each used cell is appended as
+    (mode, role_a, role_b, champ_a, champ_b, sign)."""
     roles = [r for r in ROLES if team.get(r)]
     total, n = 0.0, 0
     for i, ra in enumerate(roles):
@@ -84,35 +94,60 @@ def _team_synergy(store: Store, team: dict[str, str]) -> tuple[float, int]:
             if cell is not None:
                 total += cell[1]  # z
                 n += 1
+                if cells_out is not None:
+                    cells_out.append(("synergy", ra, rb, team[ra], team[rb], sign))
     return total, n
 
 
-def _team_strength(store: Store, team: dict[str, str], rank: str) -> tuple[float, int]:
+def _team_strength(store: Store, team: dict[str, str], rank: str,
+                   strength=None) -> tuple[float, int]:
     """(sum of win-rate EDGE over an even 50% baseline, n known champions).
 
     Centering on 0.5 means an unknown/absent champion contributes 0 (neutral),
     so the champ_strength DIFFERENCE stays valid mid-draft when a side is empty.
-    Returned as a sum; the caller divides by the full team size."""
+    Returned as a sum; the caller divides by the full team size.
+
+    `strength` (WS2) swaps the edge SOURCE, not the semantics: when given, the
+    edge is `strength.edge(champ)` — the own-data EB posterior mean − 0.5,
+    champion-keyed (role/rank collapsed) — instead of the machineloling
+    rank+role win rate. Same centering, same denominators, same None-skips, so
+    the feature's scale is identical either way. Which source a model was
+    trained with lives in its meta (`champ_strength_source`); scoring paths
+    resolve `strength` from that, keeping train and serve in lockstep."""
     total, n = 0.0, 0
     for r in ROLES:
         champ = team.get(r)
         if not champ:
             continue
-        wr = store.win_rate(rank, r, champ)
-        if wr is not None:
-            total += wr - 0.5
+        edge = (strength.edge(champ) if strength is not None
+                else _wr_edge(store, rank, r, champ))
+        if edge is not None:
+            total += edge
             n += 1
     return total, n
 
 
+def _wr_edge(store: Store, rank: str, role: str, champ: str) -> float | None:
+    wr = store.win_rate(rank, role, champ)
+    return None if wr is None else wr - 0.5
+
+
 def draft_features(store: Store, allies: dict[str, str], enemies: dict[str, str],
-                   rank: str | None = None) -> DraftFeatures:
+                   rank: str | None = None, strength=None,
+                   collect_cells: bool = False) -> DraftFeatures:
     """Turn one team's draft view into the model feature vector.
 
     allies / enemies are {engine-role: champion}; missing roles are simply
     omitted (never penalized). `rank` selects the win_rate bracket for
-    champ_strength (defaults to config.DEFAULT_RANK)."""
+    champ_strength (defaults to config.DEFAULT_RANK). `strength` (optional)
+    replaces champ_strength's source with the own-data EB posterior — see
+    `_team_strength`; training passes a per-row leave-one-match-out view,
+    serving the latest posterior. `collect_cells` additionally records the
+    identity of every z cell each feature was summed from (see
+    DraftFeatures.cells) for WS3's cell-level uncertainty propagation."""
     rank = rank or config.DEFAULT_RANK
+    cells: dict[str, list[tuple]] | None = (
+        {"lane_z": [], "counter_z": [], "synergy_z": []} if collect_cells else None)
 
     # lane_z: same-role head-to-head matchup z (ally vs enemy).
     lane_vals: list[float] = []
@@ -122,6 +157,8 @@ def draft_features(store: Store, allies: dict[str, str], enemies: dict[str, str]
             cell = store.cell("matchup", r, r, a, e)
             if cell is not None:
                 lane_vals.append(cell[1])  # z
+                if cells is not None:
+                    cells["lane_z"].append(("matchup", r, r, a, e, 1.0))
 
     # counter_z: cross-role matchup z (ally role != enemy role).
     counter_vals: list[float] = []
@@ -138,11 +175,14 @@ def draft_features(store: Store, allies: dict[str, str], enemies: dict[str, str]
             cell = store.cell("matchup", ra, rb, a, e)
             if cell is not None:
                 counter_vals.append(cell[1])  # z
+                if cells is not None:
+                    cells["counter_z"].append(("matchup", ra, rb, a, e, 1.0))
 
-    syn_a, n_syn_a = _team_synergy(store, allies)
-    syn_e, n_syn_e = _team_synergy(store, enemies)
-    str_a, n_str_a = _team_strength(store, allies, rank)
-    str_e, n_str_e = _team_strength(store, enemies, rank)
+    syn_cells = cells["synergy_z"] if cells is not None else None
+    syn_a, n_syn_a = _team_synergy(store, allies, syn_cells, 1.0)
+    syn_e, n_syn_e = _team_synergy(store, enemies, syn_cells, -1.0)
+    str_a, n_str_a = _team_strength(store, allies, rank, strength)
+    str_e, n_str_e = _team_strength(store, enemies, rank, strength)
 
     # sum over known pairings / FULL 5v5 count -> shrinks toward 0 when partial
     values = {
@@ -163,4 +203,4 @@ def draft_features(store: Store, allies: dict[str, str], enemies: dict[str, str]
         and n_syn_a == 10 and n_syn_e == 10
         and n_str_a == 5 and n_str_e == 5
     )
-    return DraftFeatures(values, coverage, complete)
+    return DraftFeatures(values, coverage, complete, cells)
