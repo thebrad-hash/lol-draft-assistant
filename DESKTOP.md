@@ -1,4 +1,4 @@
-# Desktop app — live champ-select sync for friends (no host needed)
+# BRADDRAFT desktop app — live champ-select sync for friends (no host needed)
 
 The cloud (Vercel) deployment can't read a local League client — live sync only
 works when the app runs on the **same PC as League**. This packages the whole app
@@ -10,16 +10,20 @@ This is the complement to the hosted site:
 | Use | What | Live sync |
 |---|---|---|
 | Access anywhere / share a link / manual entry | the Vercel URL | no |
-| Auto-read your (or a friend's) own champ select | **this desktop .exe** | **yes** |
+| Auto-read your (or a friend's) own champ select | **BRADDRAFT.exe** | **yes** |
 
 ## Build it (Windows)
 ```
 cd web  &  npm run build  &  cd ..      REM build the UI into web/dist
-build_desktop.bat                       REM -> dist\lol-draft-assistant.exe (~39 MB)
+build_desktop.bat                       REM -> dist\BRADDRAFT.exe (~40 MB)
 ```
+The build bundles the whole `data/models` folder, not just `winprob.json`: the
+`*_bootstrap.json` ensembles drive the win-probability **error bars** and the
+"too close to call" tie flags (the heart of the UI), and the per-patch models
+feed the dataset toggle. The app icon comes from `desktop/braddraft.ico`.
 
 ## Give it to friends
-Share `dist\lol-draft-assistant.exe` via a **GitHub Release** (repo → Releases →
+Share `dist\BRADDRAFT.exe` via a **GitHub Release** (repo → Releases →
 Draft a new release → attach the `.exe`) or any file host. Each friend:
 1. Downloads the `.exe`.
 2. Double-clicks it. Windows SmartScreen may warn (unsigned app) → **More info →
@@ -35,5 +39,6 @@ then `python -m lol_draft.server`, and open `localhost:8000`.
 ## Notes
 - The serve path is numpy-free, so the bundle stays small/fast.
 - Rebuild after any code/UI/model change (rebuild `web/dist` first).
-- The `.exe` and `build/` are gitignored — distribute the binary via a Release,
-  not the repo.
+- The `.exe`, `build/`, and `*.spec` are gitignored — distribute the binary via a
+  Release, not the repo. The tracked build inputs are `launcher.py`,
+  `build_desktop.bat`, and `desktop/braddraft.ico`.

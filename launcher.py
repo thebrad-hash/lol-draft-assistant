@@ -34,7 +34,7 @@ def _open_browser() -> None:
 
 def main() -> None:
     print("=" * 60)
-    print("  LoL Draft Assistant")
+    print("  BRADDRAFT  ·  Best Rotations And Designations")
     print(f"  Open {URL} in your browser (opening it now).")
     print("  Live champ-select sync works while League is running here.")
     print("  Close this window to stop.")
