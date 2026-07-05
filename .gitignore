@@ -24,6 +24,10 @@ data/games/
 data/models/*
 !data/models/winprob.json
 !data/models/winprob_bootstrap.json
+# Promoted current-patch toggle model: Patch 16.13 · Diamond (5k games) + its
+# bootstrap ensemble. Shipped alongside the backbone so /api/models offers it live.
+!data/models/winprob_patch_16.13.json
+!data/models/winprob_patch_16.13_bootstrap.json
 # zcell_noise.json arms WS3 z-cell sampling on the serve path (its presence IS
 # the feature flag); champ_strength.json stays ignored while WS2 is unpromoted.
 !data/models/zcell_noise.json

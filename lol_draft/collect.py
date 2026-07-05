@@ -192,10 +192,20 @@ class RiotClient:
         return puuids
 
     def match_ids(self, puuid: str, *, queue: int = QUEUE_RANKED_SOLO,
-                  count: int = 20, start: int = 0) -> list[str]:
+                  count: int = 20, start: int = 0,
+                  start_time: Optional[int] = None,
+                  end_time: Optional[int] = None) -> list[str]:
+        params = {"queue": queue, "type": "ranked", "start": start, "count": count}
+        # Match-V5 startTime/endTime are epoch SECONDS; when set, the API returns
+        # only games whose start falls in the window. This is the cheap way to
+        # collect one recent patch: filter at the id level so we never spend a
+        # match fetch on an off-patch game we'd only discard.
+        if start_time is not None:
+            params["startTime"] = int(start_time)
+        if end_time is not None:
+            params["endTime"] = int(end_time)
         data = self.get(self.region,
-                        f"/lol/match/v5/matches/by-puuid/{puuid}/ids",
-                        {"queue": queue, "type": "ranked", "start": start, "count": count})
+                        f"/lol/match/v5/matches/by-puuid/{puuid}/ids", params)
         return data or []
 
     def match(self, match_id: str) -> Optional[dict]:
@@ -340,7 +350,8 @@ def _drain_seeds(client: RiotClient, puuids: list[str], *, seen: set[str],
                  out, ledger, stats: ExtractStats, start_count: int,
                  target_games: int, matches_per_seed: int,
                  keep_patch: Optional[str], valid_champions: Optional[set[str]],
-                 progress_every: int, label: str = "") -> None:
+                 progress_every: int, label: str = "",
+                 start_time: Optional[int] = None) -> None:
     """Process a batch of seed puuids: fetch each player's recent matches, extract
     labeled rows, append to `out` (and every fetched id to `ledger`). Mutates the
     shared `seen`/`stats` so callers can drive it across many tiers/divisions
@@ -348,7 +359,8 @@ def _drain_seeds(client: RiotClient, puuids: list[str], *, seen: set[str],
     for pi, puuid in enumerate(puuids):
         if stats.matches_ok + start_count >= target_games:
             return
-        for mid in client.match_ids(puuid, count=matches_per_seed):
+        for mid in client.match_ids(puuid, count=matches_per_seed,
+                                     start_time=start_time):
             if mid in seen:
                 continue
             seen.add(mid)
@@ -389,6 +401,7 @@ def collect(client: RiotClient, *, tier: str, division: str = "I",
             seed_pages: int = 3, out_path: Path,
             valid_champions: Optional[set[str]] = None,
             keep_patch: Optional[str] = None,
+            start_time: Optional[int] = None,
             progress_every: int = 25) -> ExtractStats:
     """Seed -> matchIds -> matches -> labeled rows, appended to `out_path`
     (JSONL). Stops once `target_games` distinct complete matches are written.
@@ -413,7 +426,8 @@ def collect(client: RiotClient, *, tier: str, division: str = "I",
         _drain_seeds(client, puuids, seen=seen, out=out, ledger=ledger, stats=stats,
                      start_count=start_count, target_games=target_games,
                      matches_per_seed=matches_per_seed, keep_patch=keep_patch,
-                     valid_champions=valid_champions, progress_every=progress_every)
+                     valid_champions=valid_champions, start_time=start_time,
+                     progress_every=progress_every)
 
     _report(stats, start_count, out_path, keep_patch)
     return stats
@@ -425,6 +439,7 @@ def collect_ladder(client: RiotClient, *, min_tier: str = "EMERALD",
                    seed_pages: int = 5, out_path: Path,
                    valid_champions: Optional[set[str]] = None,
                    keep_patch: Optional[str] = None,
+                   start_time: Optional[int] = None,
                    progress_every: int = 25) -> ExtractStats:
     """Collect across a set of tiers, walking them in order and, within each
     non-apex tier, divisions I -> IV, until `target_games` matches are written or
@@ -472,7 +487,7 @@ def collect_ladder(client: RiotClient, *, min_tier: str = "EMERALD",
                              stats=stats, start_count=start_count,
                              target_games=target_games,
                              matches_per_seed=matches_per_seed, keep_patch=keep_patch,
-                             valid_champions=valid_champions,
+                             valid_champions=valid_champions, start_time=start_time,
                              progress_every=progress_every, label=f"{rung} ")
                 if keep_patch and (stats.matches_ok - got) == 0 and tier in APEX_TIERS:
                     # An apex tier with zero on-patch yield this rung is fine; keep going.
@@ -568,6 +583,11 @@ def main(argv=None):
                                    "walks divisions I-IV. Overrides --min-tier/--emerald-plus.")
     p.add_argument("--patch", help="keep ONLY this major.minor patch, e.g. 16.12 "
                                    "(fetches broadly, drops off-patch games)")
+    p.add_argument("--since", help="only fetch games started on/after this UTC date, "
+                                   "YYYY-MM-DD (Match-V5 startTime filter). Pair with "
+                                   "--patch to collect one recent patch efficiently — "
+                                   "off-patch games are skipped at the id level, not "
+                                   "fetched then discarded.")
     p.add_argument("--target", type=int, default=5000, help="target distinct matches")
     p.add_argument("--seed-pages", type=int, default=3, help="League-V4 entry pages to seed")
     p.add_argument("--matches-per-seed", type=int, default=20)
@@ -599,16 +619,23 @@ def main(argv=None):
     out_path = Path(args.out) if args.out else _default_out()
     tiers = [t.strip().upper() for t in args.tiers.split(",") if t.strip()] if args.tiers else None
     min_tier = "EMERALD" if args.emerald_plus else args.min_tier
+    start_time = None
+    if args.since:
+        from datetime import datetime, timezone
+        start_time = int(datetime.strptime(args.since, "%Y-%m-%d")
+                         .replace(tzinfo=timezone.utc).timestamp())
+        print(f"  startTime filter: games on/after {args.since} UTC (epoch {start_time}).")
     if tiers or min_tier:
         collect_ladder(client, tiers=tiers, min_tier=min_tier or "EMERALD",
                        target_games=args.target, matches_per_seed=args.matches_per_seed,
                        seed_pages=args.seed_pages, out_path=out_path,
-                       valid_champions=valid, keep_patch=args.patch)
+                       valid_champions=valid, keep_patch=args.patch,
+                       start_time=start_time)
     else:
         collect(client, tier=args.tier, division=args.division,
                 target_games=args.target, matches_per_seed=args.matches_per_seed,
                 seed_pages=args.seed_pages, out_path=out_path, valid_champions=valid,
-                keep_patch=args.patch)
+                keep_patch=args.patch, start_time=start_time)
 
 
 if __name__ == "__main__":
