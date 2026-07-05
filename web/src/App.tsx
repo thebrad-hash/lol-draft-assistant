@@ -167,7 +167,7 @@ function Shell() {
           <span className="brand__mark">⌖</span>
           <div>
             <div className="brand__title">BradDraft</div>
-            <div className="brand__sub">EV pick recommendations · machineloling z-scores</div>
+            <div className="brand__sub">Best Rotations And Designations · machineloling z-scores</div>
           </div>
         </div>
         <div className="topbar__actions">
