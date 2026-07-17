@@ -35,10 +35,17 @@ below). Optional: `WINPROB_TIE_THRESHOLD` (default 0.85).
   path still works in the local/tunnel setup (`python -m lol_draft.server` +
   `cloudflared tunnel --url http://localhost:8000`).
 
-## Premade live draft (Upstash + the broadcaster)
+## Premade live draft (Upstash + desktop broadcast)
 
 The "no designated host" setup: nobody has to be hosting or even playing for the
 premade to use it — **whoever is in the game** broadcasts the draft to everyone.
+
+**Preferred path (no extra tool):** the in-game player runs **BRADDRAFT.exe**
+(desktop). Local lobbies proxy to this public site by default, so Go Live both
+reads LCU and publishes into the same Redis lobby friends follow in the browser.
+See [`DESKTOP.md`](DESKTOP.md). The standalone `braddraft_broadcast.py` / `.exe`
+remains as a lightweight alternative if someone only wants to push LCU without
+the full app.
 
 ### 1. Add Upstash Redis (required for lobby/live; ≈2 min)
 
@@ -55,23 +62,17 @@ Redeploy (`npx vercel --prod`) after adding them so the function picks them up.
 
 ### 2. Game-day flow
 
-1. One person: **+ Premade → Share lobby**, send the link.
-2. Everyone opens it, sets username + role(s) + pool. Live auto-enables; until
-   someone broadcasts it shows *"waiting for live draft."*
-3. Whoever is in champ select runs the broadcaster. Three ways, easiest first:
-   - **`broadcast.bat`** (repo root) — double-click, paste your share link, done. Needs Python.
-   - **`dist/braddraft-broadcast.exe`** — prebuilt standalone (no Python); hand it to
-     teammates. Run: `braddraft-broadcast.exe "https://YOUR-APP.vercel.app/?lobby=ABC123"`
-   - **Python directly:**
-     ```bash
-     python braddraft_broadcast.py "https://YOUR-APP.vercel.app/?lobby=ABC123"
-     ```
-
-   Your name is auto-read from your League client (override with `--name`). `--demo`
-   tests without a game; `--once` pushes once and exits; Ctrl-C clears the broadcast
-   (it also goes stale ~12s after the broadcaster stops). Rebuild the exe anytime with
-   the PyInstaller command below.
+1. One person: **+ Premade → Share lobby**, send the link (public site URL).
+2. Everyone opens it (website is enough), sets username + role(s) + pool. Live
+   auto-enables; until someone broadcasts it shows *"waiting for live draft."*
+3. **Whoever is in champ select** runs desktop (recommended):
+   - Double-click **BRADDRAFT.exe**, **Join** with the share link (or
+     `BRADDRAFT.exe "https://…/?lobby=ID"`), leave **Go Live** on.
+   - Status: **Live · broadcasting**. Friends on the site see the board fill.
+   - Lightweight alternative (LCU push only): `braddraft-broadcast.exe` /
+     `braddraft_broadcast.py` / `broadcast.bat` with the same share URL.
 4. Everyone else just watches — the draft auto-fills, each from **their own** role.
+   You do not need to be in the lobby.
 
 Make it a double-click `.exe` for teammates without Python:
 

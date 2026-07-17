@@ -17,13 +17,14 @@ type PickerTarget = { type: 'ban' } | { type: 'add'; side: Side } | { type: 'poo
 
 function LiveControl() {
   const { live, setLive, liveStatus } = useDraft();
-  const friend = liveStatus.following; // we're a remote member following the host
+  const { lobbyId } = useLobby();
+  const friend = liveStatus.following; // remote member following a teammate's broadcast
   let dotClass = 'live-dot';
   let label = '';
   if (live) {
     if (friend) {
-      // friends can't read their own client over a shared link — they follow a
-      // teammate's broadcast, auto-filled with their own role.
+      // Website / tunnel friends can't read LCU — they follow a teammate who
+      // is in-game (desktop or broadcaster), each with their own role.
       dotClass += liveStatus.inChampSelect ? ' is-on' : ' is-wait';
       if (liveStatus.inChampSelect) {
         label = liveStatus.sourceName ? `following ${liveStatus.sourceName}` : 'following';
@@ -32,7 +33,12 @@ function LiveControl() {
       }
     } else if (liveStatus.inChampSelect) {
       dotClass += ' is-on';
-      label = liveStatus.demo ? 'demo' : 'synced';
+      // When we're in a premade, local LCU is also pushed to the shared lobby.
+      label = liveStatus.demo
+        ? 'demo'
+        : lobbyId
+          ? 'broadcasting'
+          : 'synced';
     } else if (liveStatus.connected) {
       dotClass += ' is-wait';
       label = 'waiting…';
@@ -42,8 +48,10 @@ function LiveControl() {
     }
   }
   const title = friend
-    ? "Following a teammate's live champ select — whoever's in the game broadcasts it and you see the draft with your own role."
-    : 'Sync the draft from your live League champ select (reads the local client, read-only)';
+    ? "Following a teammate's live champ select — whoever is in the game (desktop Go Live) broadcasts it; you see the draft with your own role."
+    : lobbyId
+      ? 'Reads your local League client and broadcasts the draft to this premade so friends on the share link auto-fill.'
+      : 'Sync the draft from your live League champ select (reads the local client, read-only)';
   return (
     <button
       className={'btn btn--ghost live-toggle' + (live ? ' is-live' : '')}

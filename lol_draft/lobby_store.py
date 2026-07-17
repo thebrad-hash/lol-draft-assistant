@@ -7,6 +7,15 @@ lobbies live in Redis; otherwise we fall back to an in-process dict so local dev
 needs zero setup. The HTTP/REST client is stdlib-only (urllib), keeping the
 serverless function lean (no numpy/redis deps on the serve path).
 
+**Remote lobby mode (desktop / local multiplayer):** when
+`BRADDRAFT_LOBBY_ORIGIN` points at the public app (default for non-Vercel
+processes = https://lol-draft-assistant-rho.vercel.app), every lobby op is
+proxied to that origin's `/api/lobby*`. Local desktop still reads LCU and
+serves recommendations, but premade state + live broadcast share the same
+Redis-backed lobby friends open on the website — no Brad-as-host tunnel.
+
+Set `BRADDRAFT_LOBBY_ORIGIN=local` to force in-process/Redis-only lobbies.
+
 Storage model (Redis): one hash per lobby at key `lobby:{id}`:
   - field `__exists` = "1"           (so an empty lobby is still a real lobby)
   - field `m:{memberId}` = JSON      ({name, role, pool})
@@ -23,6 +32,7 @@ import os
 import secrets
 import threading
 import time
+import urllib.error
 import urllib.request
 
 LOBBY_TTL = 6 * 3600  # seconds; refreshed on each write
@@ -35,6 +45,9 @@ MAX_TEXT = 300
 # tab), so the broadcast goes stale and friends stop following it. Comparing the
 # server's own clock to its own stamp avoids any host/friend clock-skew issues.
 LIVE_STALE = 12
+
+# Public BradDraft deployment — share links + remote lobby target for desktop.
+DEFAULT_PUBLIC_ORIGIN = "https://lol-draft-assistant-rho.vercel.app"
 
 
 # --- backend selection ---
@@ -49,6 +62,78 @@ def _token() -> str | None:
 
 def redis_enabled() -> bool:
     return bool(_url() and _token())
+
+
+def lobby_remote_origin() -> str | None:
+    """Origin of the shared public lobby API, or None for local Redis/memory.
+
+    Local/desktop processes default to the public Vercel app so a friend running
+    BRADDRAFT.exe broadcasts into the same lobby website users follow. Vercel
+    itself never remotes (it IS the source of truth). Override with
+    BRADDRAFT_LOBBY_ORIGIN (=local to disable).
+    """
+    raw = os.environ.get("BRADDRAFT_LOBBY_ORIGIN")
+    if raw is not None:
+        v = raw.strip().rstrip("/")
+        if not v or v.lower() in ("local", "off", "0", "none", "false"):
+            return None
+        return v
+    # Cloud deploy is the hub — never proxy to yourself.
+    if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"):
+        return None
+    return DEFAULT_PUBLIC_ORIGIN
+
+
+def public_origin() -> str | None:
+    """Origin used in shareable lobby links (friends should open the website).
+
+    BRADDRAFT_PUBLIC_ORIGIN overrides; otherwise matches remote lobby origin.
+    None means "use the browser's current origin."
+    """
+    raw = os.environ.get("BRADDRAFT_PUBLIC_ORIGIN")
+    if raw is not None:
+        v = raw.strip().rstrip("/")
+        return v or None
+    return lobby_remote_origin()
+
+
+def _http_json(
+    method: str,
+    url: str,
+    body: dict | None = None,
+    *,
+    not_found_ok: bool = False,
+) -> dict | None:
+    """JSON HTTP to the remote lobby API. Returns None on 404 (when allowed) or hard failure."""
+    data = None if body is None else json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        method=method,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "BradDraft-lobby-proxy/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = resp.read()
+            if not raw:
+                return {}
+            return json.loads(raw)
+    except urllib.error.HTTPError as e:
+        if not_found_ok and e.code == 404:
+            return None
+        # Surface other errors as None so the UI degrades (lobby "expired")
+        # rather than 500ing the local server mid-draft.
+        try:
+            e.read()
+        except Exception:
+            pass
+        return None
+    except Exception:
+        return None
 
 
 def _cmd(*args):
@@ -126,7 +211,16 @@ def _view(lid: str, members: dict[str, dict]) -> dict:
     }
 
 
-def create(lid: str) -> dict:
+def create(lid: str) -> dict | None:
+    """Create a lobby. Returns None if remote mode is on and the public API is unreachable
+    (so we never mint a local id that friends cannot open on the share link)."""
+    remote = lobby_remote_origin()
+    if remote:
+        # Public API mints its own id; ignore the local candidate.
+        out = _http_json("POST", f"{remote}/api/lobby")
+        if not out or "id" not in out:
+            return None
+        return {"id": out["id"], "members": out.get("members") or []}
     if redis_enabled():
         key = _KEY.format(lid)
         _cmd("HSET", key, "__exists", "1")
@@ -138,6 +232,9 @@ def create(lid: str) -> dict:
 
 
 def get(lid: str) -> dict | None:
+    remote = lobby_remote_origin()
+    if remote:
+        return _http_json("GET", f"{remote}/api/lobby/{lid}", not_found_ok=True)
     if redis_enabled():
         flat = _cmd("HGETALL", _KEY.format(lid)) or []
         if not flat:
@@ -156,6 +253,15 @@ def get(lid: str) -> dict | None:
 
 
 def upsert_member(lid: str, member_id: str, data: dict) -> dict | None:
+    remote = lobby_remote_origin()
+    if remote:
+        body = {
+            "memberId": member_id,
+            "name": data.get("name") or "Player",
+            "role": data.get("role"),
+            "pool": data.get("pool") or [],
+        }
+        return _http_json("PUT", f"{remote}/api/lobby/{lid}/member", body, not_found_ok=True)
     if redis_enabled():
         key = _KEY.format(lid)
         if not _cmd("EXISTS", key):
@@ -171,6 +277,13 @@ def upsert_member(lid: str, member_id: str, data: dict) -> dict | None:
 
 
 def remove_member(lid: str, member_id: str) -> dict | None:
+    remote = lobby_remote_origin()
+    if remote:
+        return _http_json(
+            "DELETE",
+            f"{remote}/api/lobby/{lid}/member/{member_id}",
+            not_found_ok=True,
+        )
     if redis_enabled():
         key = _KEY.format(lid)
         if not _cmd("EXISTS", key):
@@ -189,6 +302,14 @@ def set_live_draft(lid: str, draft: dict | None, source: dict | None = None) -> 
     fresh server stamp and the source member ({memberId, name}). ANY member may be
     the source — whoever is actually in champ select pushes; last write wins.
     Returns the updated view, or None if the lobby is gone."""
+    remote = lobby_remote_origin()
+    if remote:
+        body = {
+            "draft": draft,
+            "memberId": (source or {}).get("memberId"),
+            "name": (source or {}).get("name"),
+        }
+        return _http_json("PUT", f"{remote}/api/lobby/{lid}/live", body, not_found_ok=True)
     if redis_enabled():
         key = _KEY.format(lid)
         if not _cmd("EXISTS", key):
@@ -213,6 +334,10 @@ def set_live_draft(lid: str, draft: dict | None, source: dict | None = None) -> 
 def post_message(lid: str, member_id: str, name: str, text: str) -> dict | None:
     """Append a chat message to the lobby, capped to the last MAX_MESSAGES.
     Returns the updated view (members + messages), or None if the lobby is gone."""
+    remote = lobby_remote_origin()
+    if remote:
+        body = {"memberId": member_id, "name": name or "Player", "text": text}
+        return _http_json("POST", f"{remote}/api/lobby/{lid}/chat", body, not_found_ok=True)
     text = (text or "").strip()[:MAX_TEXT]
     if not text:
         return get(lid)

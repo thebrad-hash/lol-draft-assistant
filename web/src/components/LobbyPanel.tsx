@@ -26,9 +26,11 @@ function loadCollapsed(): boolean {
 // collapsible comms panel — roster left, team chat right (slide-over on
 // phones). Updates live as friends change their picks.
 export function LobbyPanel({ onEditPool }: { onEditPool: () => void }) {
-  const { lobbyId, members, me, setName, setRole, create } = useLobby();
+  const { lobbyId, members, me, setName, setRole, create, join, lobbyRemote } = useLobby();
   const { dismissed, dismiss, reopenHints } = useOnboarding();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const [joinRaw, setJoinRaw] = useState('');
+  const [joinErr, setJoinErr] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const rolesRef = useRef<HTMLDivElement>(null);
   const poolRef = useRef<HTMLButtonElement>(null);
@@ -61,13 +63,44 @@ export function LobbyPanel({ onEditPool }: { onEditPool: () => void }) {
         <div className="lobby__invite">
           <h2 className="lobby__invite-title">Draft with your premade</h2>
           <p className="lobby__invite-copy">
-            Create a lobby and share the link — everyone sets a role and champion pool, and the
-            board shows the smartest coordinated picks.
+            {lobbyRemote
+              ? 'Create a lobby and share the link — friends open it on the website. Whoever is in champ select keeps Go Live on here so the board fills for everyone.'
+              : 'Create a lobby and share the link — everyone sets a role and champion pool, and the board shows the smartest coordinated picks.'}
           </p>
         </div>
         <button className="btn lobby__invite-cta" onClick={() => void create()}>
           + Premade lobby
         </button>
+        <div className="lobby__join-row">
+          <input
+            className="lobby__join-input"
+            placeholder="Or paste a lobby link / id"
+            value={joinRaw}
+            onChange={(e) => {
+              setJoinRaw(e.target.value);
+              setJoinErr(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const ok = join(joinRaw);
+                setJoinErr(!ok);
+                if (ok) setJoinRaw('');
+              }
+            }}
+            aria-label="Join with lobby link or id"
+          />
+          <button
+            className="btn btn--ghost"
+            onClick={() => {
+              const ok = join(joinRaw);
+              setJoinErr(!ok);
+              if (ok) setJoinRaw('');
+            }}
+          >
+            Join
+          </button>
+        </div>
+        {joinErr && <p className="lobby__join-err">Couldn’t parse that link — paste the full share URL or lobby id.</p>}
       </section>
     );
   }

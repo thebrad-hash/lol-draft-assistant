@@ -48,10 +48,13 @@ Everything runs on your own PC. It works whether or not anyone else is online.
 
 | You want to… | Use | Live champ-select sync |
 | --- | --- | --- |
-| Auto-read your own champ select, fully offline-capable | **`BRADDRAFT.exe`** (this download) | ✅ yes — reads your local client |
-| Share a link, manual entry, **premade lobby + chat** | the [hosted site](https://lol-draft-assistant-rho.vercel.app) | ⚙️ via an in-game teammate's broadcast |
+| Auto-read your own champ select **and** broadcast it to a premade | **`BRADDRAFT.exe`** (this download) | ✅ yes — reads your local client; friends on the site follow |
+| Share a link, manual entry, **premade lobby + chat**, follow live draft | the [hosted site](https://lol-draft-assistant-rho.vercel.app) | ⚙️ follow mode — someone in-game runs desktop (or the small broadcaster) |
 
-The desktop app and the website are the same app; the only difference is that a locally-run copy can read *your* League client, which a cloud server never can.
+**Premade without a dedicated host:** share the website lobby link with everyone.
+Whoever is in champ select runs `BRADDRAFT.exe`, joins that lobby, leaves **Go Live**
+on. Everyone else stays in the browser — no tunnels, no pasting lobby ids onto
+someone else's localhost.
 
 ## How the numbers work
 

@@ -122,15 +122,15 @@ Components (`web/src/components`):
 - **`/api/live` is served from a background-thread cache** — the (blocking) local-client read
   runs off the request path, so a premade all polling “Go Live” can’t wedge the server. The
   static champ→roles map is cached too.
-- **Live sync: host reads LCU, premade follows.** Only the host can read a local League
-  client (the server runs on their machine; friends reach it through the tunnel). So the
-  host **broadcasts** its champ-select draft to the lobby (`PUT /api/lobby/{id}/live`, no
-  per-player role) and every member **follows** it from the lobby poll, overlaying their
-  OWN role (their lobby role chip) as `pickingForRole`. Host vs friend is auto-detected per
-  request (`/api/live` → `isLocal`: loopback + no proxy headers = host); a `?live=host|follow`
-  URL param overrides it. Go Live auto-enables on lobby join. The broadcast goes stale after
-  `LIVE_STALE` (12s) if the host stops publishing (left select / closed tab) — followed picks
-  persist, but “following” reverts to “waiting for host”. Friends still get manual entry too.
+- **Live sync: whoever is in-game broadcasts; premade follows.** LCU is local-only, so the
+  in-game player runs **desktop** (`BRADDRAFT.exe` / local server). Local processes default
+  to **remote lobby mode** (`BRADDRAFT_LOBBY_ORIGIN` → public Vercel): lobby create/join/chat
+  and live `PUT /api/lobby/{id}/live` hit the shared Redis room. Share links use
+  `publicOrigin` (website), so friends open the site only. Desktop with Go Live + lobby
+  shows **Live · broadcasting**. Website clients are always follow (`isLocal` false).
+  Go Live auto-enables on lobby join. Broadcast goes stale after `LIVE_STALE` (12s).
+  `BRADDRAFT_LOBBY_ORIGIN=local` disables remote lobbies. Optional lightweight
+  `braddraft_broadcast.py` remains for LCU-push without the full app.
 - **Coachless:** link-out only (never scrape).
 - **Fonts** load from Google Fonts; the offline desktop build falls back to serif/sans
   (self-host woff2 before shipping that build).

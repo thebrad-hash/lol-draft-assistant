@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createLobby, getLobby, leaveLobby, publishLive, sendChat, upsertMember } from './lobbyApi';
+import { fetchRuntime, parseLobbyInput } from './runtime';
 import { ROLES } from './types';
 import type { ChatMessage, LiveDraft, LiveSource, LobbyMember, Role } from './types';
 
@@ -69,13 +70,17 @@ interface LobbyValue {
   liveSource: LiveSource | null; // who's broadcasting it (null when none)
   me: { memberId: string; name: string; role: Role | null; pool: string[] };
   shareUrl: string | null;
+  /** True when this process proxies lobbies to the public site (desktop multiplayer). */
+  lobbyRemote: boolean;
   create: () => Promise<void>;
+  /** Join an existing lobby from a share URL or bare id (desktop: paste friend link). */
+  join: (raw: string) => boolean;
   leave: () => Promise<void>;
   setName: (name: string) => void;
   setRole: (role: Role | null) => void;
   togglePool: (championId: string) => void;
   sendMessage: (text: string) => Promise<void>;
-  broadcastLive: (draft: LiveDraft | null) => Promise<void>; // host -> lobby
+  broadcastLive: (draft: LiveDraft | null) => Promise<void>; // local LCU reader -> lobby
 }
 
 const LobbyContext = createContext<LobbyValue | null>(null);
@@ -97,6 +102,15 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
     return r ? poolsRef.current[r] ?? [] : [];
   });
   const seeded = useRef(false); // have we reconciled local state with the server yet?
+  const [publicOrigin, setPublicOrigin] = useState<string | null>(null);
+  const [lobbyRemote, setLobbyRemote] = useState(false);
+
+  useEffect(() => {
+    void fetchRuntime().then((r) => {
+      setPublicOrigin(r.publicOrigin);
+      setLobbyRemote(r.lobbyRemote);
+    });
+  }, []);
 
   const setName = useCallback((n: string) => {
     setNameState(n);
@@ -142,6 +156,15 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
     seeded.current = true; // brand-new lobby: local state is authoritative
     setLobbyParam(res.id);
     setLobbyId(res.id);
+  }, []);
+
+  const join = useCallback((raw: string) => {
+    const id = parseLobbyInput(raw);
+    if (!id) return false;
+    seeded.current = false; // re-seed from server for the new lobby
+    setLobbyParam(id);
+    setLobbyId(id);
+    return true;
   }, []);
 
   const leave = useCallback(async () => {
@@ -243,10 +266,12 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
 
   const shareUrl = useMemo(() => {
     if (!lobbyId || typeof window === 'undefined') return null;
-    const url = new URL(window.location.origin + window.location.pathname);
+    // Prefer the public website origin so friends don't need localhost/tunnels.
+    const base = (publicOrigin || window.location.origin).replace(/\/$/, '');
+    const url = new URL(base + '/');
     url.searchParams.set('lobby', lobbyId);
     return url.toString();
-  }, [lobbyId]);
+  }, [lobbyId, publicOrigin]);
 
   const value = useMemo<LobbyValue>(
     () => ({
@@ -258,7 +283,9 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       liveSource,
       me: { memberId, name, role, pool },
       shareUrl,
+      lobbyRemote,
       create,
+      join,
       leave,
       setName,
       setRole,
@@ -266,7 +293,27 @@ export function LobbyProvider({ children }: { children: ReactNode }) {
       sendMessage,
       broadcastLive,
     }),
-    [lobbyId, connected, members, messages, liveDraft, liveSource, memberId, name, role, pool, shareUrl, create, leave, setName, togglePool, sendMessage, broadcastLive],
+    [
+      lobbyId,
+      connected,
+      members,
+      messages,
+      liveDraft,
+      liveSource,
+      memberId,
+      name,
+      role,
+      pool,
+      shareUrl,
+      lobbyRemote,
+      create,
+      join,
+      leave,
+      setName,
+      togglePool,
+      sendMessage,
+      broadcastLive,
+    ],
   );
 
   return <LobbyContext.Provider value={value}>{children}</LobbyContext.Provider>;

@@ -5,12 +5,29 @@ works when the app runs on the **same PC as League**. This packages the whole ap
 (engine, web UI, data, and live sync) into one Windows executable that anyone can
 run with **no Python install and no dependency on you**.
 
+## Premade multiplayer (friends without you)
+
+Lobbies are shared through the **public website** (Redis). Desktop **proxies**
+lobby create / join / chat / live-broadcast to
+`https://lol-draft-assistant-rho.vercel.app` by default
+(`BRADDRAFT_LOBBY_ORIGIN`). So:
+
+1. Anyone: desktop or website → **+ Premade** → **Share lobby** (link is always the public site).
+2. Friends open that link **in the browser** — set name, role, pool; they follow live draft.
+3. **Whoever is in champ select** runs **BRADDRAFT.exe**, joins the same lobby
+   (paste link, or `BRADDRAFT.exe "https://…/?lobby=ID"`), leaves **Go Live** on.
+4. Their client is read locally; the draft is pushed to the shared lobby. Everyone
+   else auto-fills. You do not need to be online.
+
+Optional env: `BRADDRAFT_LOBBY_ORIGIN=local` for offline-only lobbies (no friends on the site).
+`BRADDRAFT_PUBLIC_ORIGIN` overrides the share-link origin.
+
 This is the complement to the hosted site:
 
 | Use | What | Live sync |
 |---|---|---|
-| Access anywhere / share a link / manual entry | the Vercel URL | no |
-| Auto-read your (or a friend's) own champ select | **BRADDRAFT.exe** | **yes** |
+| Access anywhere / share a link / follow live draft | the Vercel URL | follow only |
+| Auto-read **your** champ select + broadcast to premade | **BRADDRAFT.exe** | **yes** |
 
 ## Build it (Windows)
 ```
@@ -29,8 +46,10 @@ Draft a new release → attach the `.exe`) or any file host. Each friend:
 2. Double-clicks it. Windows SmartScreen may warn (unsigned app) → **More info →
    Run anyway**. (Unsigned ≠ unsafe; code-signing costs money.)
 3. Their browser opens to **http://localhost:8000** — the full app.
-4. With League running, **Go Live** syncs their champ select. Entirely on their
-   machine, independent of you.
+4. With League running, **Go Live** syncs their champ select. In a premade, the
+   status shows **Live · broadcasting** and friends on the share link update live.
+
+Only the **in-game** player needs the `.exe`. Everyone else can stay on the website.
 
 **Mac/Linux friends:** PyInstaller builds are per-OS, so a Windows `.exe` is
 Windows-only. They run from source instead: `pip install -r requirements.txt`

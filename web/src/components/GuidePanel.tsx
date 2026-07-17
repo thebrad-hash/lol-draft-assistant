@@ -36,12 +36,14 @@ export function GuidePanel() {
           <h4 className="guide__sub">Premade flow</h4>
           <ol className="guide__steps">
             <li>
-              Share the lobby link — everyone joins and sets a username, role(s), and champion
-              pool.
+              Anyone creates a lobby and shares the link — teammates open it (website is fine)
+              and set a username, role, and champion pool.
             </li>
             <li>
-              As bans and picks come in, fill the draft board (or use live champ-select sync if
-              you're the host).
+              <strong>Whoever is in champ select</strong> runs the desktop app (BRADDRAFT.exe)
+              with that lobby open and leaves <strong>Go Live</strong> on. It reads their
+              League client and broadcasts the draft so everyone else auto-fills — no designated
+              host, and Brad does not need to be online.
             </li>
             <li>
               Read “who picks next” and the per-role board — your teammates' pool champs show

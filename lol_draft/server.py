@@ -220,6 +220,21 @@ def health():
     return {"ok": True, "meta": meta}
 
 
+@app.get("/api/runtime")
+def runtime():
+    """Client bootstrap: where to point share links, and whether lobbies are
+    proxied to the public app (desktop multiplayer without a tunnel)."""
+    remote = lobby_store.lobby_remote_origin()
+    public = lobby_store.public_origin()
+    return {
+        "publicOrigin": public,
+        "lobbyRemote": bool(remote),
+        "lobbyOrigin": remote,
+        # This process can read a local League client when the browser is local.
+        "lcuCapable": True,
+    }
+
+
 def _dataset_label(dataset_id: str, meta: dict) -> str:
     """Human label for the toggle: backbone as 'All patches', a plain patch as
     'Patch 16.12', and a rank-variant id like '16.12-emerald' as
@@ -665,8 +680,18 @@ class MemberIn(BaseModel):
 
 @app.post("/api/lobby")
 def create_lobby():
-    """Create an empty lobby; the client shares <origin>/?lobby=<id>."""
-    return lobby_store.create(secrets.token_urlsafe(6))
+    """Create an empty lobby; the client shares the public site /?lobby=<id>.
+
+    On desktop/local, lobby_store may mint the lobby on the public Vercel app
+    so friends opening the website join the same Redis-backed room.
+    """
+    out = lobby_store.create(secrets.token_urlsafe(6))
+    if out is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Public lobby service unreachable — check network, or set BRADDRAFT_LOBBY_ORIGIN=local for offline lobbies",
+        )
+    return out
 
 
 @app.get("/api/lobby/{lobby_id}")
